@@ -1,0 +1,16 @@
+node_modules
+.turbo
+.idea
+.vscode
+.DS_Store
+dist
+build
+.next
+coverage
+.env
+.env.*
+pnpm-lock.yaml
+yarn.lock
+*.log
+tmp
+temp
