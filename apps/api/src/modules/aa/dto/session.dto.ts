@@ -1,0 +1,23 @@
+import { IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { LoginType } from './onboard.dto';
+
+export class StartSessionRequestDto {
+  @IsEnum(LoginType)
+  loginType: LoginType;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+}
+
+export class StartSessionResponseDto {
+  sessionId: string;
+  ownerAddress: string;
+}
+
+export class StatusResponseDto {
+  sessionId: string;
+  status: 'pending' | 'completed' | 'failed';
+  smartAccountAddress?: string;
+  paymasterPolicyId?: string;
+}
