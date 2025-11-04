@@ -1,0 +1,436 @@
+.wrapper {
+  min-height: 100vh;
+  padding: 80px 16px;
+  display: flex;
+  justify-content: center;
+  background:
+    linear-gradient(160deg, rgba(5, 6, 7, 0.92), rgba(5, 6, 7, 0.98)),
+    url("/backgrounds/Mon-olith.png") center/cover no-repeat;
+}
+
+.flowCard {
+  width: min(960px, 100%);
+  background: rgba(13, 14, 18, 0.94);
+  border-radius: 28px;
+  border: 1px solid rgba(124, 241, 181, 0.12);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  color: #f5f5f5;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.kicker {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(124, 241, 181, 0.7);
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  color: #a6adba;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.progressItem {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.progressItemActive {
+  border-color: rgba(124, 241, 181, 0.4);
+  background: rgba(124, 241, 181, 0.08);
+}
+
+.progressItemComplete {
+  border-color: rgba(124, 241, 181, 0.25);
+}
+
+.progressItem small {
+  display: block;
+  margin-top: 4px;
+  color: #7d8497;
+}
+
+.progressIndex {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(124, 241, 181, 0.1);
+  color: rgba(124, 241, 181, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.stepContainer {
+  background: linear-gradient(160deg, rgba(9, 10, 14, 0.9), rgba(9, 10, 12, 0.72));
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 32px;
+}
+
+.stepPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stepDescription {
+  margin: 0;
+  color: #a6adba;
+  line-height: 1.6;
+}
+
+.actionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 12px 24px;
+  border: 1px solid transparent;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border 0.2s ease;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.primaryButton {
+  background: #7cf1b5;
+  color: #07231a;
+}
+
+.primaryButton:disabled {
+  background: rgba(124, 241, 181, 0.6);
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5;
+}
+
+.ghostButton {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f5f5f5;
+}
+
+.primaryButton:not(:disabled):hover,
+.secondaryButton:not(:disabled):hover,
+.ghostButton:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.helperText {
+  margin: 0;
+  font-size: 13px;
+  color: #7d8497;
+}
+
+.emailForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emailRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.emailRow input {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(4, 5, 8, 0.6);
+  padding: 12px 16px;
+  color: #f5f5f5;
+}
+
+.emailRow input:focus-visible {
+  outline: 2px solid rgba(124, 241, 181, 0.5);
+  outline-offset: 2px;
+}
+
+.errorInline {
+  color: #ff9a9a;
+  font-size: 13px;
+}
+
+.socialBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.noteList {
+  color: #7d8497;
+  padding-left: 18px;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(124, 241, 181, 0.8);
+}
+
+.input,
+.select {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(4, 5, 8, 0.6);
+  padding: 12px 16px;
+  color: #f5f5f5;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #d0d7e2;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #7cf1b5;
+}
+
+.footerActions {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.planCard {
+  border-radius: 18px;
+  padding: 20px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition:
+    transform 0.2s ease,
+    border 0.2s ease,
+    background 0.2s ease;
+}
+
+.planCardActive {
+  border-color: rgba(124, 241, 181, 0.45);
+  background: rgba(124, 241, 181, 0.08);
+}
+
+.planCard:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(124, 241, 181, 0.32);
+}
+
+.planHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(124, 241, 181, 0.12);
+  color: rgba(124, 241, 181, 0.86);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.planHighlight {
+  color: rgba(124, 241, 181, 0.8);
+  font-size: 14px;
+}
+
+.planDetails {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.planDetails dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7d8497;
+}
+
+.planDetails dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #d0d7e2;
+}
+
+.summarySection {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.summarySection dl {
+  margin: 12px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.summarySection dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7d8497;
+}
+
+.summarySection dd {
+  margin: 4px 0 0;
+  color: #d0d7e2;
+  font-size: 14px;
+}
+
+.link {
+  color: rgba(124, 241, 181, 0.9);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.error {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 58, 58, 0.12);
+  border: 1px solid rgba(255, 58, 58, 0.35);
+  color: #ffd9d9;
+  font-size: 14px;
+}
+
+.addressMono {
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  color: #e8fdf3;
+  word-break: break-all;
+}
+
+.completionIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(124, 241, 181, 0.12);
+  color: rgba(124, 241, 181, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.completionTitle {
+  margin: 0;
+  font-size: 28px;
+}
+
+.completionDetails {
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 720px) {
+  .flowCard {
+    padding: 32px 20px;
+    border-radius: 20px;
+  }
+
+  .stepContainer {
+    padding: 24px;
+  }
+
+  .footerActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .progress {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}

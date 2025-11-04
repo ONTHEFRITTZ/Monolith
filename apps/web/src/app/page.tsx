@@ -33,7 +33,10 @@ export default function Home() {
             Monad with confidence. Launching soon with quick off-ramps and partner APIs.
           </p>
           <div className={styles.ctas}>
-            <Link className={styles.primary} href="#updates">
+            <Link className={styles.primary} href="/onboarding">
+              Get Started
+            </Link>
+            <Link className={styles.secondary} href="#updates">
               View Build Roadmap
             </Link>
             <Link
