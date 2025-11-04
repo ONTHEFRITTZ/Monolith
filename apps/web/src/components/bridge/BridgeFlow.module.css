@@ -1,0 +1,320 @@
+.wrapper {
+  min-height: 100vh;
+  padding: 32px 16px 56px;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 7, 0.96), rgba(5, 6, 7, 0.98)),
+    url("/backgrounds/Mon-olith.png") center/cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #f5f7fa;
+}
+
+.header {
+  width: min(640px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.headline {
+  font-size: clamp(24px, 6vw, 36px);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subline {
+  margin: 0;
+  color: #a6adba;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border 0.2s ease;
+}
+
+.primaryButton {
+  background: #7cf1b5;
+  color: #0a261c;
+}
+
+.primaryButton:disabled {
+  background: rgba(124, 241, 181, 0.6);
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f5f7fa;
+}
+
+.ghostButton {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #d0d7e2;
+}
+
+.primaryButton:not(:disabled):hover,
+.secondaryButton:not(:disabled):hover,
+.ghostButton:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.connectActions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.intentList {
+  width: min(640px, 100%);
+  display: grid;
+  gap: 16px;
+}
+
+.intentCard {
+  background: rgba(17, 19, 24, 0.88);
+  border-radius: 20px;
+  border: 1px solid rgba(124, 241, 181, 0.12);
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  transition:
+    border 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+  cursor: pointer;
+}
+
+.intentCard:hover {
+  border-color: rgba(124, 241, 181, 0.35);
+  transform: translateY(-2px);
+  background: rgba(17, 19, 24, 0.94);
+}
+
+.intentCard:disabled,
+.intentCardDisabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.intentCardLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.intentTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.intentSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #a6adba;
+}
+
+.intentMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.intentBalance {
+  font-size: 15px;
+}
+
+.intentTags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tag {
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(124, 241, 181, 0.1);
+  color: rgba(124, 241, 181, 0.9);
+  font-size: 12px;
+}
+
+.tagNeutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d0d7e2;
+}
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 2, 4, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 16px;
+  z-index: 20;
+}
+
+.sheetContent {
+  width: min(640px, 100%);
+  background: rgba(15, 17, 22, 0.96);
+  border-radius: 20px 20px 12px 12px;
+  padding: 24px 20px 28px;
+  border: 1px solid rgba(124, 241, 181, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sheetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 18px;
+}
+
+.amountInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amountInput {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(5, 6, 9, 0.72);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.amountInput input {
+  border: none;
+  background: transparent;
+  color: #f5f7fa;
+  font-size: 26px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.amountInput input:focus {
+  outline: none;
+}
+
+.quickActions {
+  display: flex;
+  gap: 10px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(124, 241, 181, 0.8);
+}
+
+.quickButton {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f7fa;
+  font-size: 13px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.quickButton:hover {
+  border-color: rgba(124, 241, 181, 0.4);
+}
+
+.quoteSummary {
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #d0d7e2;
+}
+
+.statusBar {
+  margin-top: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(124, 241, 181, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statusLabel {
+  font-size: 13px;
+  color: #a6adba;
+}
+
+.txHash {
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  word-break: break-all;
+  color: #e8fdf3;
+}
+
+.errorBanner {
+  margin-bottom: 16px;
+  background: rgba(255, 82, 82, 0.12);
+  color: #ffd1d1;
+  border: 1px solid rgba(255, 82, 82, 0.35);
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+@media (min-width: 900px) {
+  .wrapper {
+    padding: 56px 32px 72px;
+    align-items: center;
+  }
+
+  .header {
+    margin-bottom: 32px;
+  }
+}
