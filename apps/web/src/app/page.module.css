@@ -12,9 +12,18 @@
   min-height: 100vh;
   justify-content: center;
   background:
+    linear-gradient(180deg, rgba(5, 6, 7, 0.82), rgba(5, 6, 7, 0.94)),
     radial-gradient(circle at top left, rgba(124, 241, 181, 0.16), transparent 50%),
     radial-gradient(circle at bottom right, rgba(124, 241, 181, 0.12), transparent 55%),
-    var(--background);
+    url("/backgrounds/Mon-olith.png"), var(--background);
+  background-size: auto, auto, auto, cover, auto;
+  background-position:
+    center,
+    top left,
+    bottom right,
+    center,
+    center;
+  background-repeat: no-repeat;
   color: var(--text-primary);
   font-family: var(--font-geist-sans);
 }
