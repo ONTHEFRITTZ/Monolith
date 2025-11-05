@@ -1,5 +1,8 @@
 "use client";
 
+"use client";
+
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import styles from "./BridgeFlow.module.css";
 import { useBridgeState } from "./useBridgeState";
@@ -10,6 +13,11 @@ import type { BalanceIntent, WalletProvider } from "./types";
 import { providerLabel } from "./mockBridgeClient";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
+const WALLET_LOGOS: Record<WalletProvider, string> = {
+  metamask: "/logos/metamask.png",
+  phantom: "/logos/phantom.png",
+  backpack: "/logos/backpack.png",
+};
 
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
@@ -81,9 +89,19 @@ export function BridgeFlow() {
             if (wallet) {
               return (
                 <div key={provider} className={styles.walletChip}>
-                  <div>
-                    <span className={styles.walletProvider}>{providerLabel(provider)}</span>
-                    <span className={styles.walletAddress}>{shortAddress(wallet.address)}</span>
+                  <div className={styles.walletChipMeta}>
+                    <div className={styles.walletChipImage}>
+                      <Image
+                        src={WALLET_LOGOS[provider]}
+                        alt={`${providerLabel(provider)} logo`}
+                        fill
+                        sizes="40px"
+                      />
+                    </div>
+                    <div>
+                      <span className={styles.walletProvider}>{providerLabel(provider)}</span>
+                      <span className={styles.walletAddress}>{shortAddress(wallet.address)}</span>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -101,11 +119,21 @@ export function BridgeFlow() {
               <button
                 key={provider}
                 type="button"
-                className={styles.secondaryButton}
+                className={styles.walletButton}
                 onClick={() => void actions.connectProvider(provider)}
                 disabled={state.isLoading}
               >
-                {state.isLoading ? "Connecting..." : `Connect ${providerLabel(provider)}`}
+                <div className={styles.walletImage}>
+                  <Image
+                    src={WALLET_LOGOS[provider]}
+                    alt={`${providerLabel(provider)} logo`}
+                    fill
+                    sizes="64px"
+                  />
+                </div>
+                <span className={styles.walletButtonLabel}>
+                  {state.isLoading ? "Connecting..." : providerLabel(provider)}
+                </span>
               </button>
             );
           })}

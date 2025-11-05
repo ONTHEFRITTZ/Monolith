@@ -87,10 +87,50 @@
 
 .walletGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
   width: min(720px, 100%);
   margin: 12px 0 8px;
+}
+
+.walletButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(124, 241, 181, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border 0.2s ease,
+    background 0.2s ease;
+}
+
+.walletButton:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(124, 241, 181, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.walletButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.walletImage {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.walletButtonLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f5f7fa;
 }
 
 .walletChip {
@@ -102,6 +142,20 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   border: 1px solid rgba(124, 241, 181, 0.12);
+}
+
+.walletChipMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.walletChipImage {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .walletProvider {
