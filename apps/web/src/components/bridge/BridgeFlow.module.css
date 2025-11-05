@@ -1,9 +1,12 @@
 .wrapper {
   min-height: 100vh;
-  padding: 32px 16px 56px;
+  padding: 48px 16px 72px;
   background:
-    linear-gradient(180deg, rgba(5, 6, 7, 0.96), rgba(5, 6, 7, 0.98)),
-    url("/backgrounds/Mon-olith.png") center/cover no-repeat;
+    linear-gradient(190deg, rgba(10, 4, 20, 0.4), rgba(8, 3, 16, 0.7)),
+    radial-gradient(circle at 20% 12%, rgba(255, 90, 188, 0.24), transparent 58%),
+    radial-gradient(circle at 85% 85%, rgba(96, 70, 255, 0.26), transparent 60%),
+    url("/backgrounds/Mon-olith.png") center/cover no-repeat,
+    #07020f;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11,23 +14,25 @@
 }
 
 .header {
-  width: min(640px, 100%);
+  width: min(680px, 100%);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
   text-align: center;
 }
 
 .headline {
-  font-size: clamp(24px, 6vw, 36px);
   margin: 0;
-  line-height: 1.2;
+  font-size: clamp(28px, 6vw, 44px);
+  line-height: 1.15;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  color: #fde6ff;
 }
 
 .subline {
   margin: 0;
-  color: #a6adba;
+  color: rgba(229, 203, 255, 0.75);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -35,9 +40,9 @@
 .primaryButton,
 .secondaryButton,
 .ghostButton {
-  border: 1px solid transparent;
+  border: none;
   border-radius: 999px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   font-weight: 600;
   font-size: 15px;
   display: inline-flex;
@@ -46,36 +51,38 @@
   cursor: pointer;
   transition:
     transform 0.2s ease,
-    background 0.2s ease,
-    border 0.2s ease;
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
 .primaryButton {
-  background: #7cf1b5;
-  color: #0a261c;
+  background: linear-gradient(135deg, rgba(210, 102, 255, 0.85), rgba(120, 60, 220, 0.92));
+  color: #0d041a;
+  box-shadow: 0 18px 45px rgba(112, 48, 197, 0.45);
 }
 
 .primaryButton:disabled {
-  background: rgba(124, 241, 181, 0.6);
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .secondaryButton {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(20, 10, 32, 0.55);
   color: #f5f7fa;
+  box-shadow: inset 0 0 0 1px rgba(174, 110, 255, 0.25);
 }
 
 .ghostButton {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #d0d7e2;
+  box-shadow: inset 0 0 0 1px rgba(231, 168, 255, 0.2);
+  color: rgba(242, 210, 255, 0.85);
 }
 
 .primaryButton:not(:disabled):hover,
 .secondaryButton:not(:disabled):hover,
 .ghostButton:not(:disabled):hover {
   transform: translateY(-1px);
+  box-shadow: 0 20px 54px rgba(148, 76, 220, 0.45);
 }
 
 .connectActions {
@@ -83,14 +90,15 @@
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin-top: 12px;
 }
 
 .walletGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
   width: min(720px, 100%);
-  margin: 12px 0 8px;
+  margin: 18px 0 12px;
 }
 
 .walletButton {
@@ -98,22 +106,23 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   padding: 20px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(124, 241, 181, 0.12);
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(155deg, rgba(190, 82, 255, 0.2), rgba(42, 14, 68, 0.88));
   cursor: pointer;
   transition:
     transform 0.2s ease,
-    border 0.2s ease,
+    box-shadow 0.2s ease,
     background 0.2s ease;
+  box-shadow: 0 20px 55px rgba(98, 40, 166, 0.4);
 }
 
 .walletButton:hover:not(:disabled) {
   transform: translateY(-3px);
-  border-color: rgba(124, 241, 181, 0.35);
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(155deg, rgba(212, 110, 255, 0.32), rgba(58, 22, 96, 0.92));
+  box-shadow: 0 26px 70px rgba(132, 60, 206, 0.55);
 }
 
 .walletButton:disabled {
@@ -123,14 +132,14 @@
 
 .walletImage {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
 }
 
 .walletButtonLabel {
   font-size: 14px;
   font-weight: 600;
-  color: #f5f7fa;
+  color: #f8eaff;
 }
 
 .walletChip {
@@ -138,10 +147,10 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  border: 1px solid rgba(124, 241, 181, 0.12);
+  padding: 16px 18px;
+  background: rgba(16, 7, 28, 0.55);
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(188, 116, 255, 0.2);
 }
 
 .walletChipMeta {
@@ -156,18 +165,20 @@
   height: 40px;
   border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 12px 30px rgba(120, 60, 220, 0.45);
 }
 
 .walletProvider {
   display: block;
   font-weight: 600;
   font-size: 14px;
+  color: #fde6ff;
 }
 
 .walletAddress {
   display: block;
   font-size: 12px;
-  color: #a6adba;
+  color: rgba(229, 203, 255, 0.7);
   margin-top: 4px;
 }
 
