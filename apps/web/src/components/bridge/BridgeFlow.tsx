@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import styles from "./BridgeFlow.module.css";
 import { useBridgeState } from "./useBridgeState";
 import { BalanceIntentList } from "./BalanceIntentList";
@@ -64,83 +64,85 @@ export function BridgeFlow() {
     actions.selectIntent(undefined);
   };
 
-  const connectedSummary = useMemo(() => {
+  const connectedSummary =
+    !state.isConnected || state.connectedWallets.length === 0
+      ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
+      : "Select a balance below to bridge into Monad.";
+
+  const connectedWallet = state.connectedWallets.length > 0 ? state.connectedWallets[0] : undefined;
+
+  const renderWalletButtons = () => {
     if (!state.isConnected || state.connectedWallets.length === 0) {
-      return "Connect MetaMask, Phantom, or Backpack to detect balances across your networks.";
-    }
-
-    const chips = state.connectedWallets
-      .map((wallet) => `${providerLabel(wallet.provider)} · ${shortAddress(wallet.address)}`)
-      .join(" | ");
-    return `Connected wallets: ${chips}. Select a balance to bridge into Monad.`;
-  }, [state.connectedWallets, state.isConnected]);
-
-  const renderedWalletButtons = state.isConnected
-    ? state.connectedWallets.map((wallet) => (
-        <div key={wallet.provider} className={styles.walletChip}>
-          <div className={styles.walletChipMeta}>
-            <div className={styles.walletChipImage}>
-              <Image
-                src={WALLET_LOGOS[wallet.provider]}
-                alt={`${providerLabel(wallet.provider)} logo`}
-                fill
-                sizes="40px"
-              />
-            </div>
-            <div>
-              <span className={styles.walletProvider}>{providerLabel(wallet.provider)}</span>
-              <span className={styles.walletAddress}>{shortAddress(wallet.address)}</span>
-            </div>
-          </div>
+      return (
+        <div className={styles.walletGrid}>
+          {WALLET_OPTIONS.map((provider) => (
+            <button
+              key={provider}
+              type="button"
+              className={styles.walletButton}
+              onClick={() => void actions.connectProvider(provider)}
+              disabled={state.isLoading}
+            >
+              <div className={styles.walletImage}>
+                <Image
+                  src={WALLET_LOGOS[provider]}
+                  alt={`${providerLabel(provider)} logo`}
+                  fill
+                  sizes="64px"
+                />
+              </div>
+              <span className={styles.walletButtonLabel}>
+                {state.isLoading ? "Connecting..." : providerLabel(provider)}
+              </span>
+            </button>
+          ))}
         </div>
-      ))
-    : WALLET_OPTIONS.map((provider) => (
-        <button
-          key={provider}
-          type="button"
-          className={styles.walletButton}
-          onClick={() => void actions.connectProvider(provider)}
-          disabled={state.isLoading}
-        >
-          <div className={styles.walletImage}>
-            <Image
-              src={WALLET_LOGOS[provider]}
-              alt={`${providerLabel(provider)} logo`}
-              fill
-              sizes="64px"
-            />
-          </div>
-          <span className={styles.walletButtonLabel}>
-            {state.isLoading ? "Connecting..." : providerLabel(provider)}
-          </span>
-        </button>
-      ));
+      );
+    }
+    return null;
+  };
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.brandMark}>
+        <Image
+          src="/logos/monolith-bridge.png"
+          alt="Mon-olith Bridge"
+          width={140}
+          height={140}
+          priority
+        />
+      </div>
+
+      {state.isConnected && connectedWallet ? (
+        <div className={styles.connectedPillFixed}>
+          <div className={styles.connectedPillMeta}>
+            <Image
+              src={WALLET_LOGOS[connectedWallet.provider]}
+              alt={`${providerLabel(connectedWallet.provider)} logo`}
+              width={32}
+              height={32}
+            />
+            <span className={styles.connectedAddress}>{shortAddress(connectedWallet.address)}</span>
+          </div>
+          <button
+            type="button"
+            className={styles.disconnectButton}
+            onClick={() => void actions.disconnectAll()}
+            disabled={state.isLoading}
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : null}
+
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
           <h1 className={styles.headline}>Bridge assets to Monad in seconds</h1>
-          {state.isConnected && state.connectedWallets.length > 0 ? (
-            <div className={styles.connectedPill}>
-              <span className={styles.connectedAddress}>
-                {providerLabel(state.connectedWallets[0].provider)} ·{" "}
-                {shortAddress(state.connectedWallets[0].address)}
-              </span>
-              <button
-                type="button"
-                className={styles.disconnectButton}
-                onClick={() => void actions.disconnectAll()}
-                disabled={state.isLoading}
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : null}
         </div>
         <p className={styles.subline}>{connectedSummary}</p>
 
-        <div className={styles.walletGrid}>{renderedWalletButtons}</div>
+        {renderWalletButtons()}
 
         {state.isConnected ? (
           <div className={styles.connectActions}>

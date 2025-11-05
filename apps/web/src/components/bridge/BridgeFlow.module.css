@@ -22,6 +22,55 @@
   text-align: center;
 }
 
+.headerTopRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.connectedPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(35, 14, 62, 0.7);
+  box-shadow: 0 12px 28px rgba(110, 52, 200, 0.35);
+  border: 1px solid rgba(200, 140, 255, 0.25);
+}
+
+.connectedAddress {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: rgba(249, 225, 255, 0.9);
+}
+
+.disconnectButton {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(220, 110, 255, 0.85), rgba(140, 60, 220, 0.9));
+  color: #12061f;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 10px 25px rgba(125, 60, 210, 0.45);
+}
+
+.disconnectButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(148, 76, 220, 0.55);
+}
+
+.disconnectButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .headline {
   margin: 0;
   font-size: clamp(28px, 6vw, 44px);
@@ -404,7 +453,6 @@
   border-radius: 14px;
   font-size: 14px;
 }
-
 @media (min-width: 900px) {
   .wrapper {
     padding: 56px 32px 72px;
@@ -413,5 +461,59 @@
 
   .header {
     margin-bottom: 32px;
+  }
+}
+
+.connectedPillFixed {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .connectedPillFixed {
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(35, 14, 62, 0.78);
+    border: 1px solid rgba(210, 145, 255, 0.35);
+    box-shadow: 0 18px 40px rgba(120, 48, 210, 0.42);
+    z-index: 20;
+  }
+}
+
+.connectedPillMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(249, 225, 255, 0.9);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.brandMark {
+  position: fixed;
+  top: 24px;
+  left: 32px;
+  z-index: 20;
+}
+
+.brandMark img {
+  display: block;
+  width: 140px;
+  height: auto;
+}
+
+@media (max-width: 900px) {
+  .brandMark {
+    top: 16px;
+    left: 16px;
+  }
+
+  .brandMark img {
+    width: 100px;
   }
 }
