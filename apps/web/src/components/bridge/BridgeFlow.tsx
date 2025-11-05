@@ -9,6 +9,8 @@ import { AmountSheet } from "./AmountSheet";
 import { BridgeStatusBar } from "./BridgeStatusBar";
 import type { BalanceIntent, WalletProvider } from "./types";
 import { providerLabel } from "./bridgeClient";
+import { PlansPricingModal } from "./PlansPricingModal";
+import { ProfilePromptModal } from "./ProfilePromptModal";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
@@ -21,6 +23,9 @@ export function BridgeFlow() {
   const { state, actions } = useBridgeState();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(true);
+  const [guestMode, setGuestMode] = useState(false);
 
   const handleSelect = (intent: BalanceIntent) => {
     actions.selectIntent(intent);
@@ -67,7 +72,9 @@ export function BridgeFlow() {
   const connectedSummary =
     !state.isConnected || state.connectedWallets.length === 0
       ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
-      : "Select a balance below to bridge into Monad.";
+      : guestMode
+        ? "Guest bridging active — standard routing fee applies. Upgrade to claim sponsorship."
+        : "Select a balance below to bridge into Monad.";
 
   const connectedWallet = state.connectedWallets.length > 0 ? state.connectedWallets[0] : undefined;
 
@@ -104,6 +111,36 @@ export function BridgeFlow() {
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.utilityRail}>
+        <button type="button" className={styles.planButton} onClick={() => setPricingOpen(true)}>
+          Plans &amp; pricing
+        </button>
+
+        {state.isConnected && connectedWallet ? (
+          <div className={styles.connectedPillFixed}>
+            <div className={styles.connectedPillMeta}>
+              <Image
+                src={WALLET_LOGOS[connectedWallet.provider]}
+                alt={`${providerLabel(connectedWallet.provider)} logo`}
+                width={32}
+                height={32}
+              />
+              <span className={styles.connectedAddress}>
+                {shortAddress(connectedWallet.address)}
+              </span>
+            </div>
+            <button
+              type="button"
+              className={styles.disconnectButton}
+              onClick={() => void actions.disconnectAll()}
+              disabled={state.isLoading}
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : null}
+      </div>
+
       <div className={styles.brandMark}>
         <Image
           src="/logos/monolith-bridge.png"
@@ -113,28 +150,6 @@ export function BridgeFlow() {
           priority
         />
       </div>
-
-      {state.isConnected && connectedWallet ? (
-        <div className={styles.connectedPillFixed}>
-          <div className={styles.connectedPillMeta}>
-            <Image
-              src={WALLET_LOGOS[connectedWallet.provider]}
-              alt={`${providerLabel(connectedWallet.provider)} logo`}
-              width={32}
-              height={32}
-            />
-            <span className={styles.connectedAddress}>{shortAddress(connectedWallet.address)}</span>
-          </div>
-          <button
-            type="button"
-            className={styles.disconnectButton}
-            onClick={() => void actions.disconnectAll()}
-            disabled={state.isLoading}
-          >
-            Disconnect
-          </button>
-        </div>
-      ) : null}
 
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
@@ -199,6 +214,13 @@ export function BridgeFlow() {
         quote={state.quote}
         isLoading={state.isLoading}
         submission={state.submission}
+      />
+
+      <PlansPricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
+      <ProfilePromptModal
+        open={profileOpen}
+        onDismiss={() => setProfileOpen(false)}
+        onContinueGuest={() => setGuestMode(true)}
       />
     </div>
   );

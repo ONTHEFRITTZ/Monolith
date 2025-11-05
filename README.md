@@ -32,10 +32,9 @@ NEXT_PUBLIC_ALCHEMY_SOL_API_URL=https://solana-mainnet.g.alchemy.com/v2/<key>
 NEXT_PUBLIC_MONAD_RPC_URL=...
 NEXT_PUBLIC_PAYMASTER_NAME=monolith
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
-NEXT_PUBLIC_ENABLE_MOCK_BALANCES=true
 ```
 
-- Set `NEXT_PUBLIC_ENABLE_MOCK_BALANCES=false` to route the bridge UI through the Nest API at `NEXT_PUBLIC_API_BASE_URL`.
+- The bridge UI now always talks to the Nest API at `NEXT_PUBLIC_API_BASE_URL`.
 - Backend variables mirror the same RPC URLs plus paymaster credentials:
 
 ```
@@ -105,7 +104,7 @@ npm run dev
 1. Start the dev server (`npm run dev`).
 2. Open http://localhost:3000/bridge.
 3. Connect MetaMask, Phantom, or Backpack (official SDKs/adapters are pre-integrated).
-4. To test with live API responses, set `NEXT_PUBLIC_ENABLE_MOCK_BALANCES=false` and ensure the Nest API is running. Leave the flag as `true` to keep using mock balances.
+4. Ensure the Nest API is running so balance detection, quotes, and submissions flow through Prisma + Neon rather than local mocks.
 
 ## Verification
 

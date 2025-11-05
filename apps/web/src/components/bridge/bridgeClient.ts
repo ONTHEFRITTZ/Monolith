@@ -1,10 +1,3 @@
-import {
-  fetchBalances as mockFetchBalances,
-  fetchQuote as mockFetchQuote,
-  submitBridge as mockSubmitBridge,
-  chainLabel as mockChainLabel,
-  providerLabel as mockProviderLabel,
-} from "./mockBridgeClient";
 import type {
   BalanceIntent,
   BridgeSubmission,
@@ -14,10 +7,22 @@ import type {
   WalletProvider,
 } from "./types";
 
-const USE_MOCK = (process.env.NEXT_PUBLIC_ENABLE_MOCK_BALANCES ?? "true").toLowerCase() !== "false";
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+const API_BASE_URL = RAW_API_BASE.replace(/\/$/, "");
+const API_ROOT = `${API_BASE_URL}/api`;
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:3001";
+const chainDisplayName: Record<SupportedChain, string> = {
+  ethereum: "Ethereum",
+  arbitrum: "Arbitrum",
+  solana: "Solana",
+  monad: "Monad",
+};
+
+const providerDisplayName: Record<WalletProvider, string> = {
+  metamask: "MetaMask",
+  phantom: "Phantom",
+  backpack: "Backpack",
+};
 
 interface ProviderBalancesResponse {
   provider: WalletProvider;
@@ -38,7 +43,7 @@ interface SubmitBridgeApiResponse {
 }
 
 async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_ROOT}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -71,10 +76,6 @@ export async function fetchBalances(
   address: string,
   chains?: SupportedChain[]
 ): Promise<ProviderBalancesResponse> {
-  if (USE_MOCK) {
-    return mockFetchBalances(provider, address, chains);
-  }
-
   const body = JSON.stringify({
     address,
     chainConnections: chains && chains.length > 0 ? chains : undefined,
@@ -87,10 +88,6 @@ export async function fetchBalances(
 }
 
 export async function fetchQuote(intentId: string, amount: number): Promise<QuoteResponse> {
-  if (USE_MOCK) {
-    return mockFetchQuote(intentId, amount);
-  }
-
   const body = JSON.stringify({ intentId, amount });
 
   return requestApi<QuoteResponse>("/bridge/quote", {
@@ -100,10 +97,6 @@ export async function fetchQuote(intentId: string, amount: number): Promise<Quot
 }
 
 export async function submitBridge(intentId: string, amount: number): Promise<BridgeSubmission> {
-  if (USE_MOCK) {
-    return mockSubmitBridge(intentId, amount);
-  }
-
   const body = JSON.stringify({ intentId, amount });
 
   const result = await requestApi<SubmitBridgeApiResponse>("/bridge/submit", {
@@ -118,5 +111,7 @@ export async function submitBridge(intentId: string, amount: number): Promise<Br
   };
 }
 
-export const chainLabel = mockChainLabel;
-export const providerLabel = mockProviderLabel;
+export const chainLabel = (chain: SupportedChain): string => chainDisplayName[chain] ?? chain;
+
+export const providerLabel = (provider: WalletProvider): string =>
+  providerDisplayName[provider] ?? provider;
