@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                   String         @id @default(uuid())
+  smartAccountAddress  String         @unique
+  primaryOwnerAddress  String
+  loginType            String
+  status               String         @default("active")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  sessions             Session[]
+  intents              BridgeIntent[]
+}
+
+model Session {
+  id                  String   @id @default(uuid())
+  sessionId           String   @unique
+  loginType           String
+  ownerAddress        String
+  email               String?
+  status              String   @default("pending")
+  smartAccountAddress String
+  ownerPrivateKey     String
+  recoveryContacts    Json?
+  recoveryThreshold   Int?
+  passkeyEnrolled     Boolean? @default(false)
+  sponsorshipPlan     String?
+  sponsorshipTerms    String?
+  paymasterPolicyId   String?
+  account             Account? @relation(fields: [accountId], references: [id])
+  accountId           String?
+  intents             BridgeIntent[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model BridgeIntent {
+  id                    String   @id @default(uuid())
+  intentId              String   @unique
+  sourceChain           String
+  sourceToken           String
+  destinationChain      String
+  destinationToken      String
+  amount                Decimal  @db.Decimal(38, 18)
+  walletProvider        String?
+  feeBps                Int
+  estimatedDestination  Decimal  @db.Decimal(38, 18)
+  status                String   @default("created")
+  session               Session? @relation(fields: [sessionId], references: [id])
+  sessionId             String?
+  account               Account? @relation(fields: [accountId], references: [id])
+  accountId             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}

@@ -1,4 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  createModularAccountAlchemyClient,
+  sepolia,
+  arbitrumSepolia,
+} from '@alchemy/aa-alchemy';
+import { generatePrivateKey, LocalAccountSigner } from '@alchemy/aa-core';
 import { randomBytes } from 'crypto';
 import {
   LoginType,
@@ -21,8 +28,8 @@ type SessionStatus = 'pending' | 'completed' | 'failed';
 
 interface SessionRecord {
   sessionId: string;
-  ownerAddress: string;
   loginType: LoginType;
+  ownerAddress: string;
   email?: string;
   status: SessionStatus;
   recovery?: {
@@ -35,6 +42,7 @@ interface SessionRecord {
     acceptedTermsVersion: string;
   };
   smartAccountAddress?: string;
+  ownerPrivateKey?: string;
   paymasterPolicyId?: string;
   updatedAt: number;
 }
@@ -66,20 +74,45 @@ const sponsorshipPlans: Record<
   },
 };
 
+const SUPPORTED_LOGIN_CHAIN: Record<LoginType, 'ethereum' | 'arbitrum'> = {
+  [LoginType.METAMASK]: 'ethereum',
+  [LoginType.EMAIL]: 'ethereum',
+  [LoginType.SOCIAL]: 'arbitrum',
+};
+
 @Injectable()
 export class AaService {
   private readonly sessions = new Map<string, SessionRecord>();
 
-  startSession(payload: StartSessionRequestDto): StartSessionResponseDto {
+  constructor(private readonly config: ConfigService) {}
+
+  async startSession(
+    payload: StartSessionRequestDto,
+  ): Promise<StartSessionResponseDto> {
     const sessionId = this.generateSessionId(payload.loginType, payload.email);
-    const ownerAddress = this.generateAddress();
+
+    const smartAccount = await this.createSmartAccountClient(
+      SUPPORTED_LOGIN_CHAIN[payload.loginType],
+    );
+    const smartAccountAddress = await smartAccount.getAddress();
+
+    const ownerPrivateKey = smartAccount.account?.signer?.privateKey;
+    if (!ownerPrivateKey) {
+      throw new Error(
+        'Unable to derive owner private key for smart account session.',
+      );
+    }
 
     const record: SessionRecord = {
       sessionId,
-      ownerAddress,
       loginType: payload.loginType,
+      ownerAddress: smartAccountAddress,
       email: payload.email,
       status: 'pending',
+      smartAccountAddress,
+      ownerPrivateKey,
+      paymasterPolicyId:
+        this.config.get<string>('PAYMASTER_POLICY_ID') ?? undefined,
       updatedAt: Date.now(),
     };
 
@@ -87,7 +120,7 @@ export class AaService {
 
     return {
       sessionId,
-      ownerAddress,
+      ownerAddress: smartAccountAddress,
     };
   }
 
@@ -124,10 +157,6 @@ export class AaService {
       acceptedTermsVersion: payload.sponsorship.acceptedTermsVersion,
     };
 
-    session.smartAccountAddress =
-      session.smartAccountAddress ?? this.generateAddress();
-    session.paymasterPolicyId =
-      session.paymasterPolicyId ?? this.generatePaymasterPolicyId();
     session.status = 'completed';
     session.updatedAt = Date.now();
 
@@ -154,6 +183,27 @@ export class AaService {
     };
   }
 
+  private async createSmartAccountClient(chainKey: 'ethereum' | 'arbitrum') {
+    const apiKey = this.config.getOrThrow<string>('ALCHEMY_APP_ID');
+    const policyId = this.config.get<string>('PAYMASTER_POLICY_ID');
+    const ownerPrivateKey = generatePrivateKey();
+    const owner = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
+
+    const chain = chainKey === 'arbitrum' ? arbitrumSepolia : sepolia;
+
+    const client = await createModularAccountAlchemyClient({
+      apiKey,
+      chain,
+      owner,
+      gasManagerConfig: policyId ? { policyId } : undefined,
+    });
+
+    // attach underlying signer for retrieval later
+    (client as any).account.signer = owner;
+
+    return client;
+  }
+
   private generateSessionId(loginType: LoginType, email?: string): string {
     const prefix =
       loginType === LoginType.METAMASK
@@ -168,13 +218,5 @@ export class AaService {
         .padEnd(6, '0')
         .slice(0, 6) ?? randomBytes(3).toString('hex');
     return `sess_${prefix}_${serial}`;
-  }
-
-  private generateAddress(): string {
-    return `0x${randomBytes(20).toString('hex')}`;
-  }
-
-  private generatePaymasterPolicyId(): string {
-    return `paymaster_${randomBytes(4).toString('hex')}`;
   }
 }

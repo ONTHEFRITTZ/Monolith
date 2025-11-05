@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { AaService } from './aa.service';
 import {
   StartSessionRequestDto,
@@ -20,7 +20,9 @@ export class AaController {
   constructor(private readonly aaService: AaService) {}
 
   @Post('session')
-  startSession(@Body() body: StartSessionRequestDto): StartSessionResponseDto {
+  async startSession(
+    @Body() body: StartSessionRequestDto,
+  ): Promise<StartSessionResponseDto> {
     return this.aaService.startSession(body);
   }
 
