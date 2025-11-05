@@ -13,7 +13,7 @@ body {
   background-color: #050607;
   color: #f5f5f5;
   font-family:
-    var(--font-geist-sans),
+    var(--font-heading),
     system-ui,
     -apple-system,
     BlinkMacSystemFont,

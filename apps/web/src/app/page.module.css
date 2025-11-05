@@ -1,16 +1,10 @@
 .page {
-  --background: #070707;
-  --foreground: #0f1014;
-  --surface: rgba(15, 16, 20, 0.65);
-  --border: rgba(255, 255, 255, 0.08);
-  --accent: #7cf1b5;
-  --accent-soft: rgba(124, 241, 181, 0.1);
-  --text-primary: #f5f5f5;
-  --text-secondary: #a6adba;
-
+  --background: #050607;
   display: flex;
   min-height: 100vh;
+  width: 100%;
   justify-content: center;
+  align-items: center;
   background:
     linear-gradient(180deg, rgba(5, 6, 7, 0.65), rgba(5, 6, 7, 0.85)),
     radial-gradient(circle at top left, rgba(124, 241, 181, 0.18), transparent 55%),
@@ -24,172 +18,103 @@
     center,
     center;
   background-repeat: no-repeat;
-  color: var(--text-primary);
-  font-family: var(--font-geist-sans);
+  color: #f5f7fa;
+  text-align: center;
 }
 
-.main {
-  width: 100%;
-  max-width: 980px;
-  padding: 64px 40px 80px;
+.container {
+  padding: 48px 24px;
+  width: min(480px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 64px;
+  align-items: center;
+  gap: 32px;
+  background: rgba(9, 10, 13, 0.72);
+  border: 1px solid rgba(124, 241, 181, 0.18);
+  border-radius: 32px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
 }
 
-.hero {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.badge {
-  display: inline-flex;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  width: fit-content;
-  color: var(--accent);
-}
-
-.hero h1 {
-  font-size: clamp(36px, 6vw, 54px);
-  line-height: 1.08;
-  max-width: 700px;
+.title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: clamp(32px, 6vw, 52px);
+  line-height: 1.1;
+  font-weight: 600;
   margin: 0;
 }
 
 .subtitle {
-  max-width: 640px;
-  color: var(--text-secondary);
-  font-size: 18px;
+  margin: 0;
+  color: rgba(235, 242, 237, 0.74);
+  font-size: 16px;
   line-height: 1.6;
 }
 
-.ctas {
-  display: flex;
+.walletGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
-.primary,
-.secondary {
-  display: inline-flex;
+.walletButton {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 22px;
-  border-radius: 999px;
-  font-weight: 600;
+  gap: 12px;
+  padding: 20px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(124, 241, 181, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
   transition:
     transform 0.2s ease,
-    background 0.2s ease,
-    border 0.2s ease;
-  border: 1px solid transparent;
+    border 0.2s ease,
+    background 0.2s ease;
 }
 
-.primary {
-  background: var(--accent);
-  color: #04251a;
+.walletButton:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: rgba(124, 241, 181, 0.4);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.secondary {
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
+.walletButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
+.walletImage {
+  position: relative;
+  width: 72px;
+  height: 72px;
 }
 
-.featureCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
-}
-
-.featureCard h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.featureCard p {
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.timeline {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.timeline h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.timeline ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.timeline li {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.phase {
+.walletLabel {
+  font-size: 15px;
   font-weight: 600;
-  color: var(--accent);
+  letter-spacing: 0.01em;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .primary:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.05);
-  }
-
-  .secondary:hover {
-    transform: translateY(-1px);
-    border-color: rgba(124, 241, 181, 0.6);
-  }
-
-  .featureCard:hover {
-    transform: translateY(-4px);
-    border-color: rgba(124, 241, 181, 0.35);
-  }
+.error {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 96, 96, 0.35);
+  background: rgba(255, 96, 96, 0.12);
+  color: #ffd9d9;
+  font-size: 14px;
 }
 
-@media (max-width: 720px) {
-  .main {
-    padding: 48px 20px 72px;
+@media (max-width: 520px) {
+  .container {
+    padding: 36px 20px;
+    border-radius: 28px;
   }
 
-  .timeline {
-    padding: 24px;
+  .walletGrid {
+    grid-template-columns: 1fr;
   }
 }

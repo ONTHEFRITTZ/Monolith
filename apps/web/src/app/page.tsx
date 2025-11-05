@@ -1,84 +1,72 @@
-import Link from "next/link";
-import styles from "./page.module.css";
+"use client";
 
-const featureHighlights = [
-  {
-    title: "Smart Accounts by Default",
-    description:
-      "MetaMask + Alchemy Smart Wallet SDK with social recovery, session keys, and gas sponsorship baked in.",
-  },
-  {
-    title: "Transparent Liquidity Routing",
-    description:
-      "Best execution across native pools, partner LPs, and intent batching for consistently low spread.",
-  },
-  {
-    title: "Compliance Ready Controls",
-    description:
-      "Configurable limits, KYB/KYC hooks, and verifiable audit logging for enterprise-grade assurance.",
-  },
-];
+import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import styles from "./page.module.css";
+import { getConnector } from "@/lib/wallets/connectors";
+import type { WalletProvider } from "@/components/bridge/types";
+import { providerLabel } from "@/components/bridge/mockBridgeClient";
+
+const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
+const WALLET_LOGOS: Record<WalletProvider, string> = {
+  metamask: "/logos/metamask.png",
+  phantom: "/logos/phantom.png",
+  backpack: "/logos/backpack.png",
+};
 
 export default function Home() {
+  const router = useRouter();
+  const [connecting, setConnecting] = useState<WalletProvider | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConnect = async (provider: WalletProvider) => {
+    setError(null);
+    setConnecting(provider);
+    try {
+      const connector = getConnector(provider);
+      await connector.connect();
+      router.push("/bridge");
+    } catch (err) {
+      console.error(err);
+      setError("Unable to connect. Check your wallet and try again.");
+      setConnecting(null);
+    }
+  };
+
   return (
     <div className={styles.page}>
-      <main className={styles.main}>
-        <section className={styles.hero}>
-          <p className={styles.badge}>Building on Monad</p>
-          <h1>
-            Mon-olith bridges USDC &lt;-&gt; MON with low fees and intuitive smart-account UX.
-          </h1>
-          <p className={styles.subtitle}>
-            A unified interface for retail, merchants, and institutional teams to move value across
-            Monad with confidence. Launching soon with quick off-ramps and partner APIs.
-          </p>
-          <div className={styles.ctas}>
-            <Link className={styles.primary} href="/bridge">
-              Bridge Now
-            </Link>
-            <Link className={styles.secondary} href="/onboarding">
-              Smart Account Onboarding
-            </Link>
-            <Link className={styles.secondary} href="#updates">
-              View Build Roadmap
-            </Link>
-            <Link
-              className={styles.secondary}
-              href="https://alchemy.com/smart-wallet"
-              target="_blank"
+      <main className={styles.container}>
+        <div>
+          <h1 className={styles.title}>Connect your wallet</h1>
+          <p className={styles.subtitle}>Choose a provider to start bridging on Monad.</p>
+        </div>
+
+        {error ? <div className={styles.error}>{error}</div> : null}
+
+        <div className={styles.walletGrid}>
+          {WALLET_OPTIONS.map((provider) => (
+            <button
+              key={provider}
+              type="button"
+              className={styles.walletButton}
+              onClick={() => handleConnect(provider)}
+              disabled={connecting !== null}
             >
-              Explore AA Stack
-            </Link>
-          </div>
-        </section>
-
-        <section className={styles.features}>
-          {featureHighlights.map((feature) => (
-            <div key={feature.title} className={styles.featureCard}>
-              <h3>{feature.title}</h3>
-              <p>{feature.description}</p>
-            </div>
+              <span className={styles.walletImage}>
+                <Image
+                  src={WALLET_LOGOS[provider]}
+                  alt={`${providerLabel(provider)} logo`}
+                  fill
+                  sizes="72px"
+                />
+              </span>
+              <span className={styles.walletLabel}>
+                {connecting === provider ? "Connecting..." : providerLabel(provider)}
+              </span>
+            </button>
           ))}
-        </section>
-
-        <section id="updates" className={styles.timeline}>
-          <h2>Launch Track</h2>
-          <ul>
-            <li>
-              <span className={styles.phase}>Phase 0 - Foundations</span>
-              Turborepo monorepo, AA onboarding flow scaffolding, and Monad bridge contract specs.
-            </li>
-            <li>
-              <span className={styles.phase}>Phase 1 - Alpha Bridge</span>
-              Testnet settlement path with gas-sponsored smart accounts and live status
-              notifications.
-            </li>
-            <li>
-              <span className={styles.phase}>Phase 2 - Beta + Off-Ramp</span>
-              PayPal agent integration, merchant SDK preview, and enhanced compliance controls.
-            </li>
-          </ul>
-        </section>
+        </div>
       </main>
     </div>
   );

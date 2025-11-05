@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import styles from "./BridgeFlow.module.css";
