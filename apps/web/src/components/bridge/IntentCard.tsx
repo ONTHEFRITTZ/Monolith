@@ -1,5 +1,5 @@
 import styles from "./BridgeFlow.module.css";
-import { chainLabel, providerLabel } from "./mockBridgeClient";
+import { chainLabel, providerLabel } from "./bridgeClient";
 import type { BalanceIntent } from "./types";
 
 interface IntentCardProps {

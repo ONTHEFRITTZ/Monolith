@@ -1,6 +1,6 @@
 import styles from "./BridgeFlow.module.css";
 import type { BalanceIntent, BridgeSubmission, QuoteResponse } from "./types";
-import { chainLabel, providerLabel } from "./mockBridgeClient";
+import { chainLabel, providerLabel } from "./bridgeClient";
 
 interface AmountSheetProps {
   open: boolean;

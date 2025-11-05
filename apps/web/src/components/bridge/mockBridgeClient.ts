@@ -1,5 +1,6 @@
 import type {
   BalanceIntent,
+  BridgeSubmission,
   QuoteResponse,
   SupportedChain,
   SupportedToken,
@@ -194,7 +195,7 @@ export async function fetchQuote(intentId: string, amount: number): Promise<Quot
   };
 }
 
-export async function submitBridge(intentId: string, amount: number) {
+export async function submitBridge(intentId: string, amount: number): Promise<BridgeSubmission> {
   await sleep(520);
   const { provider, intent } = getBaseIntent(intentId);
   const baseIntent = buildIntent(provider, intent);

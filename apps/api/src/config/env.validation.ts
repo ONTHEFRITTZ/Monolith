@@ -28,6 +28,9 @@ class EnvironmentVariables {
   @IsUrl()
   MONAD_RPC_URL!: string;
 
+  @IsString()
+  DATABASE_URL!: string;
+
   @IsOptional()
   @IsString()
   PAYMASTER_POLICY_ID?: string;

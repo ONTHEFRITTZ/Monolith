@@ -2,7 +2,7 @@
   "name": "mon-olith",
   "private": true,
   "version": "0.1.0",
-  "description": "Mon-olith – low-cost USDC ⇄ MON bridge on Monad with smart-account UX.",
+  "description": "Mon-olith - low-cost USDC <-> MON bridge on Monad with smart-account UX.",
   "packageManager": "npm@10.9.4",
   "engines": {
     "node": ">=18.18.0"

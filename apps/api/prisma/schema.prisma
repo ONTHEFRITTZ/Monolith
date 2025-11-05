@@ -51,6 +51,8 @@ model BridgeIntent {
   amount                Decimal  @db.Decimal(38, 18)
   walletProvider        String?
   feeBps                Int
+  sourceUsdPrice        Decimal? @db.Decimal(38, 18)
+  destinationUsdPrice   Decimal? @db.Decimal(38, 18)
   estimatedDestination  Decimal  @db.Decimal(38, 18)
   status                String   @default("created")
   session               Session? @relation(fields: [sessionId], references: [id])

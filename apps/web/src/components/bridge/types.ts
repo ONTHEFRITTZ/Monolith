@@ -29,6 +29,7 @@ export interface QuoteResponse {
 }
 
 export interface BridgeSubmission {
+  intentId: string;
   txHash: string;
   status: "awaiting_source" | "pending_settlement" | "settled" | "failed";
 }

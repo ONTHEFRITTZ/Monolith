@@ -8,7 +8,7 @@ import { BalanceIntentList } from "./BalanceIntentList";
 import { AmountSheet } from "./AmountSheet";
 import { BridgeStatusBar } from "./BridgeStatusBar";
 import type { BalanceIntent, WalletProvider } from "./types";
-import { providerLabel } from "./mockBridgeClient";
+import { providerLabel } from "./bridgeClient";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { fetchBalances, fetchQuote, submitBridge } from "./mockBridgeClient";
+import { fetchBalances, fetchQuote, submitBridge } from "./bridgeClient";
 import type {
   BalanceIntent,
   BridgeActions,
@@ -129,7 +129,8 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: "Quote request failed. Try a different amount.",
+        error:
+          error instanceof Error ? error.message : "Quote request failed. Try a different amount.",
       }));
     }
   }, []);
@@ -141,6 +142,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
       setState((prev) => ({
         ...prev,
         submission: {
+          intentId: submission.intentId,
           txHash: submission.txHash,
           status: submission.status,
         },
@@ -151,7 +153,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: "Bridge submission failed. Please retry.",
+        error: error instanceof Error ? error.message : "Bridge submission failed. Please retry.",
       }));
     }
   }, []);

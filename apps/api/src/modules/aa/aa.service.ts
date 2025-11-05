@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  arbitrumSepolia,
   createModularAccountAlchemyClient,
   sepolia,
-  arbitrumSepolia,
 } from '@alchemy/aa-alchemy';
 import { generatePrivateKey, LocalAccountSigner } from '@alchemy/aa-core';
+import { Account, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   LoginType,
   OnboardRequestDto,
@@ -23,29 +25,6 @@ import {
   StatusResponseDto,
 } from './dto/session.dto';
 import { SponsorshipEstimateResponseDto } from './dto/sponsorship.dto';
-
-type SessionStatus = 'pending' | 'completed' | 'failed';
-
-interface SessionRecord {
-  sessionId: string;
-  loginType: LoginType;
-  ownerAddress: string;
-  email?: string;
-  status: SessionStatus;
-  recovery?: {
-    contacts: string[];
-    threshold: number;
-    passkeyEnrolled: boolean;
-  };
-  sponsorship?: {
-    plan: SponsorshipPlan;
-    acceptedTermsVersion: string;
-  };
-  smartAccountAddress?: string;
-  ownerPrivateKey?: string;
-  paymasterPolicyId?: string;
-  updatedAt: number;
-}
 
 const sponsorshipPlans: Record<
   SponsorshipPlan,
@@ -82,62 +61,73 @@ const SUPPORTED_LOGIN_CHAIN: Record<LoginType, 'ethereum' | 'arbitrum'> = {
 
 @Injectable()
 export class AaService {
-  private readonly sessions = new Map<string, SessionRecord>();
-
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async startSession(
     payload: StartSessionRequestDto,
   ): Promise<StartSessionResponseDto> {
     const sessionId = this.generateSessionId(payload.loginType, payload.email);
 
-    const smartAccount = await this.createSmartAccountClient(
+    const {
+      client: smartAccount,
+      ownerPrivateKey,
+      ownerAddress,
+    } = await this.createSmartAccountClient(
       SUPPORTED_LOGIN_CHAIN[payload.loginType],
     );
+
     const smartAccountAddress = await smartAccount.getAddress();
+    const paymasterPolicyId =
+      this.config.get<string>('PAYMASTER_POLICY_ID') ?? undefined;
 
-    const ownerPrivateKey = smartAccount.account?.signer?.privateKey;
-    if (!ownerPrivateKey) {
-      throw new Error(
-        'Unable to derive owner private key for smart account session.',
-      );
-    }
-
-    const record: SessionRecord = {
-      sessionId,
-      loginType: payload.loginType,
-      ownerAddress: smartAccountAddress,
-      email: payload.email,
-      status: 'pending',
+    const account = await this.upsertAccount({
       smartAccountAddress,
-      ownerPrivateKey,
-      paymasterPolicyId:
-        this.config.get<string>('PAYMASTER_POLICY_ID') ?? undefined,
-      updatedAt: Date.now(),
-    };
+      primaryOwnerAddress: ownerAddress,
+      loginType: payload.loginType,
+    });
 
-    this.sessions.set(sessionId, record);
+    await this.prisma.session.create({
+      data: {
+        sessionId,
+        loginType: payload.loginType,
+        ownerAddress,
+        email: payload.email,
+        status: 'pending',
+        smartAccountAddress,
+        ownerPrivateKey,
+        paymasterPolicyId,
+        accountId: account.id,
+      },
+    });
 
     return {
       sessionId,
-      ownerAddress: smartAccountAddress,
+      ownerAddress,
     };
   }
 
-  saveRecovery(payload: SaveRecoveryRequestDto): SaveRecoveryResponseDto {
-    const session = this.sessions.get(payload.sessionId);
+  async saveRecovery(
+    payload: SaveRecoveryRequestDto,
+  ): Promise<SaveRecoveryResponseDto> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId: payload.sessionId },
+    });
+
     if (!session) {
       throw new NotFoundException(`Session ${payload.sessionId} not found`);
     }
 
-    session.recovery = {
-      contacts: payload.contacts,
-      threshold: payload.threshold,
-      passkeyEnrolled: payload.passkeyEnrolled,
-    };
-    session.updatedAt = Date.now();
-
-    this.sessions.set(payload.sessionId, session);
+    await this.prisma.session.update({
+      where: { sessionId: payload.sessionId },
+      data: {
+        recoveryContacts: payload.contacts,
+        recoveryThreshold: payload.threshold,
+        passkeyEnrolled: payload.passkeyEnrolled,
+      },
+    });
 
     return { success: true };
   }
@@ -146,40 +136,60 @@ export class AaService {
     return sponsorshipPlans[plan];
   }
 
-  onboard(payload: OnboardRequestDto): OnboardResponseDto {
-    const session = this.sessions.get(payload.sessionId);
+  async onboard(payload: OnboardRequestDto): Promise<OnboardResponseDto> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId: payload.sessionId },
+    });
+
     if (!session) {
       throw new NotFoundException(`Session ${payload.sessionId} not found`);
     }
 
-    session.sponsorship = {
-      plan: payload.sponsorship.plan,
-      acceptedTermsVersion: payload.sponsorship.acceptedTermsVersion,
-    };
+    const accountIntent = payload.accountIntent;
+    const sponsorship = payload.sponsorship;
 
-    session.status = 'completed';
-    session.updatedAt = Date.now();
+    await this.prisma.session.update({
+      where: { sessionId: payload.sessionId },
+      data: {
+        status: 'completed',
+        email: accountIntent.email ?? session.email,
+        recoveryContacts: accountIntent.recoveryContacts as Prisma.JsonArray,
+        recoveryThreshold: accountIntent.recoveryThreshold,
+        passkeyEnrolled: accountIntent.passkeyEnrolled,
+        sponsorshipPlan: sponsorship.plan,
+        sponsorshipTerms: sponsorship.acceptedTermsVersion,
+      },
+    });
 
-    this.sessions.set(payload.sessionId, session);
+    await this.prisma.account.update({
+      where: { smartAccountAddress: session.smartAccountAddress },
+      data: {
+        primaryOwnerAddress: accountIntent.owner,
+        loginType: accountIntent.loginType,
+      },
+    });
 
     return {
       smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId: session.paymasterPolicyId,
-      status: session.status,
+      paymasterPolicyId: session.paymasterPolicyId ?? '',
+      status: 'completed',
     };
   }
 
-  getStatus(sessionId: string): StatusResponseDto {
-    const session = this.sessions.get(sessionId);
+  async getStatus(sessionId: string): Promise<StatusResponseDto> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId },
+    });
+
     if (!session) {
       throw new NotFoundException(`Session ${sessionId} not found`);
     }
 
     return {
       sessionId,
-      status: session.status,
+      status: session.status as StatusResponseDto['status'],
       smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId: session.paymasterPolicyId,
+      paymasterPolicyId: session.paymasterPolicyId ?? undefined,
     };
   }
 
@@ -188,6 +198,7 @@ export class AaService {
     const policyId = this.config.get<string>('PAYMASTER_POLICY_ID');
     const ownerPrivateKey = generatePrivateKey();
     const owner = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
+    const ownerAddress = await owner.getAddress();
 
     const chain = chainKey === 'arbitrum' ? arbitrumSepolia : sepolia;
 
@@ -201,7 +212,7 @@ export class AaService {
     // attach underlying signer for retrieval later
     (client as any).account.signer = owner;
 
-    return client;
+    return { client, ownerPrivateKey, ownerAddress };
   }
 
   private generateSessionId(loginType: LoginType, email?: string): string {
@@ -218,5 +229,28 @@ export class AaService {
         .padEnd(6, '0')
         .slice(0, 6) ?? randomBytes(3).toString('hex');
     return `sess_${prefix}_${serial}`;
+  }
+
+  private async upsertAccount(params: {
+    smartAccountAddress: string;
+    primaryOwnerAddress: string;
+    loginType: LoginType;
+  }): Promise<Account> {
+    const { smartAccountAddress, primaryOwnerAddress, loginType } = params;
+
+    return this.prisma.account.upsert({
+      where: { smartAccountAddress },
+      update: {
+        primaryOwnerAddress,
+        loginType,
+        updatedAt: new Date(),
+      },
+      create: {
+        smartAccountAddress,
+        primaryOwnerAddress,
+        loginType,
+        status: 'active',
+      },
+    });
   }
 }

@@ -1,14 +1,17 @@
-﻿import {
+import {
   IsEnum,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   IsUUID,
-  MaxLength,
   Min,
 } from 'class-validator';
-import { SupportedChain, SupportedToken } from '../types/bridge.types';
+import {
+  SupportedChain,
+  SupportedToken,
+  WalletProvider,
+} from '../types/bridge.types';
 
 export class CreateIntentDto {
   @IsEnum(SupportedChain)
@@ -28,9 +31,8 @@ export class CreateIntentDto {
   amount!: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(256)
-  walletProvider?: string;
+  @IsEnum(WalletProvider)
+  walletProvider?: WalletProvider;
 }
 
 export class IntentResponseDto {
@@ -59,6 +61,14 @@ export class IntentResponseDto {
 
   @IsNumber()
   @Min(0)
+  sourceUsdPrice!: number;
+
+  @IsNumber()
+  @Min(0)
+  destinationUsdPrice!: number;
+
+  @IsNumber()
+  @Min(0)
   estimatedDestinationAmount!: number;
 
   @IsString()
@@ -70,6 +80,6 @@ export class IntentResponseDto {
     | 'failed';
 
   @IsOptional()
-  @IsString()
-  walletProvider?: string;
+  @IsEnum(WalletProvider)
+  walletProvider?: WalletProvider;
 }

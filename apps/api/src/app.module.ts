@@ -2,9 +2,10 @@
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AaModule } from './modules/aa/aa.module';
 import { validateEnv } from './config/env.validation';
 import { BridgeModule } from './modules/bridge/bridge.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { AaModule } from './modules/aa/aa.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { BridgeModule } from './modules/bridge/bridge.module';
       envFilePath: ['apps/api/.env', '.env'],
       validate: validateEnv,
     }),
+    PrismaModule,
     AaModule,
     BridgeModule,
   ],
