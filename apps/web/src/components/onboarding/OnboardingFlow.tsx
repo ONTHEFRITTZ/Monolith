@@ -8,7 +8,7 @@ import { OnboardingStepReview } from "./OnboardingStepReview";
 import { OnboardingStepCompleted } from "./OnboardingStepCompleted";
 import { useOnboardingState, normaliseContacts } from "./useOnboardingState";
 import type { LoginType, SponsorshipPlanId } from "./types";
-import { estimateSponsorship, finalizeOnboarding, saveRecovery, startSession } from "./mockClient";
+import { estimateSponsorship, finalizeOnboarding, saveRecovery, startSession } from "./client";
 
 const stepMeta = [
   { id: "identify", title: "Identify", description: "Connect your smart account." },
@@ -63,6 +63,9 @@ export function OnboardingFlow() {
   const handleSaveRecovery = useCallback(
     async (payload: { contacts: string[]; passkeyEnrolled: boolean; threshold: number }) => {
       try {
+        if (!state.sessionId) {
+          throw new Error("Session unavailable. Restart onboarding.");
+        }
         setStepBusy(true);
         actions.setProcessing(true);
 
@@ -78,7 +81,12 @@ export function OnboardingFlow() {
           throw new Error("At least one recovery contact must be provided.");
         }
 
-        await saveRecovery();
+        await saveRecovery({
+          sessionId: state.sessionId,
+          contacts: contacts.map((contact) => contact.value),
+          threshold: payload.threshold,
+          passkeyEnrolled: payload.passkeyEnrolled,
+        });
         actions.setRecovery({
           contacts,
           recoveryThreshold: payload.threshold,
@@ -94,7 +102,7 @@ export function OnboardingFlow() {
         setStepBusy(false);
       }
     },
-    [actions, handleError]
+    [actions, handleError, state.sessionId]
   );
 
   const handlePlanSelect = useCallback(
@@ -117,10 +125,37 @@ export function OnboardingFlow() {
   );
 
   const handleReviewSubmit = useCallback(async () => {
+    if (!state.sessionId || !state.loginType || !state.ownerAddress) {
+      handleError("Session information is incomplete. Restart onboarding.");
+      return;
+    }
+    if (!state.termsAccepted) {
+      handleError("Please accept the sponsorship terms before continuing.");
+      return;
+    }
+    if (!state.contacts || state.contacts.length === 0) {
+      handleError("Add at least one recovery contact before continuing.");
+      return;
+    }
+
     try {
       setStepBusy(true);
       actions.setProcessing(true);
-      const response = await finalizeOnboarding();
+      const response = await finalizeOnboarding({
+        sessionId: state.sessionId,
+        ownerAddress: state.ownerAddress,
+        loginType: state.loginType,
+        email: state.email,
+        contacts: state.contacts,
+        recoveryThreshold: state.recoveryThreshold,
+        passkeyEnrolled: state.passkeyEnrolled,
+        plan: state.sponsorshipPlan,
+      });
+
+      if (response.status !== "completed") {
+        throw new Error(`Unexpected onboarding status: ${response.status}`);
+      }
+
       actions.complete({
         accountAddress: response.accountAddress,
         paymasterPolicyId: response.paymasterPolicyId,
@@ -132,7 +167,19 @@ export function OnboardingFlow() {
       actions.setProcessing(false);
       setStepBusy(false);
     }
-  }, [actions, handleError]);
+  }, [
+    actions,
+    handleError,
+    state.contacts,
+    state.email,
+    state.loginType,
+    state.ownerAddress,
+    state.passkeyEnrolled,
+    state.recoveryThreshold,
+    state.sessionId,
+    state.sponsorshipPlan,
+    state.termsAccepted,
+  ]);
 
   const renderStep = () => {
     switch (state.currentStep) {

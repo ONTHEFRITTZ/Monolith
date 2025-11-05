@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { getConnector } from "@/lib/wallets/connectors";
 import type { WalletProvider } from "@/components/bridge/types";
-import { providerLabel } from "@/components/bridge/mockBridgeClient";
+import { providerLabel } from "@/components/bridge/bridgeClient";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
