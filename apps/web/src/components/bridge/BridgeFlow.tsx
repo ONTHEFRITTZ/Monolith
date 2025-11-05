@@ -6,7 +6,10 @@ import { useBridgeState } from "./useBridgeState";
 import { BalanceIntentList } from "./BalanceIntentList";
 import { AmountSheet } from "./AmountSheet";
 import { BridgeStatusBar } from "./BridgeStatusBar";
-import type { BalanceIntent } from "./types";
+import type { BalanceIntent, WalletProvider } from "./types";
+import { providerLabel } from "./mockBridgeClient";
+
+const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
@@ -31,7 +34,7 @@ export function BridgeFlow() {
     if (Number.isNaN(amount) || amount <= 0) {
       return;
     }
-    actions.requestQuote(state.selectedIntent.id, amount);
+    void actions.requestQuote(state.selectedIntent.id, amount);
   };
 
   const handleConfirm = async () => {
@@ -55,39 +58,79 @@ export function BridgeFlow() {
     actions.selectIntent(undefined);
   };
 
-  const connectCopy = state.isConnected ? "Refresh balances" : "Connect wallet";
-  const connectHandler = state.isConnected ? actions.refreshBalances : actions.connectWallet;
-
-  const primaryAddress = state.primaryAddress ?? "Not connected";
-
-  const headerSubtitle = useMemo(() => {
-    if (!state.isConnected) {
-      return "Connect your smart account to detect USDC balances across Ethereum, Arbitrum, Solana, and more.";
+  const connectedSummary = useMemo(() => {
+    if (!state.isConnected || state.connectedWallets.length === 0) {
+      return "Connect MetaMask, Phantom, or Backpack to detect balances across your networks.";
     }
-    return `Connected as ${primaryAddress}. Select a balance to bridge into Monad.`;
-  }, [primaryAddress, state.isConnected]);
+
+    const chips = state.connectedWallets
+      .map((wallet) => `${providerLabel(wallet.provider)} · ${shortAddress(wallet.address)}`)
+      .join(" | ");
+    return `Connected wallets: ${chips}. Select a balance to bridge into Monad.`;
+  }, [state.connectedWallets, state.isConnected]);
 
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
         <h1 className={styles.headline}>Bridge assets to Monad in seconds</h1>
-        <p className={styles.subline}>{headerSubtitle}</p>
+        <p className={styles.subline}>{connectedSummary}</p>
 
-        <div className={styles.connectActions}>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={connectHandler}
-            disabled={state.isLoading}
-          >
-            {state.isLoading ? "Loading..." : connectCopy}
-          </button>
-          {state.isConnected ? (
-            <button type="button" className={styles.ghostButton} onClick={actions.disconnect}>
-              Disconnect
-            </button>
-          ) : null}
+        <div className={styles.walletGrid}>
+          {WALLET_OPTIONS.map((provider) => {
+            const wallet = state.connectedWallets.find((item) => item.provider === provider);
+            if (wallet) {
+              return (
+                <div key={provider} className={styles.walletChip}>
+                  <div>
+                    <span className={styles.walletProvider}>{providerLabel(provider)}</span>
+                    <span className={styles.walletAddress}>{shortAddress(wallet.address)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.ghostButton}
+                    onClick={() => void actions.removeProvider(provider)}
+                    disabled={state.isLoading}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={provider}
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => void actions.connectProvider(provider)}
+                disabled={state.isLoading}
+              >
+                {state.isLoading ? "Connecting..." : `Connect ${providerLabel(provider)}`}
+              </button>
+            );
+          })}
         </div>
+
+        {state.isConnected ? (
+          <div className={styles.connectActions}>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void actions.refreshBalances()}
+              disabled={state.isLoading}
+            >
+              {state.isLoading ? "Refreshing..." : "Refresh balances"}
+            </button>
+            <button
+              type="button"
+              className={styles.ghostButton}
+              onClick={() => void actions.disconnectAll()}
+              disabled={state.isLoading}
+            >
+              Disconnect all
+            </button>
+          </div>
+        ) : null}
       </header>
 
       {state.error ? (
@@ -103,8 +146,7 @@ export function BridgeFlow() {
         <BalanceIntentList intents={state.intents} onSelect={handleSelect} />
       ) : (
         <p className={styles.subline}>
-          We support USDC on Ethereum, Arbitrum, Solana, and more. Connect a wallet to see your
-          available balances.
+          We surface USDC balances from EVM and Solana wallets. Connect a provider to begin.
         </p>
       )}
 
@@ -127,4 +169,9 @@ export function BridgeFlow() {
       />
     </div>
   );
+}
+
+function shortAddress(address: string) {
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }

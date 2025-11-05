@@ -1,7 +1,14 @@
-import type { BalanceIntent, QuoteResponse, SupportedChain, SupportedToken } from "./types";
+import type {
+  BalanceIntent,
+  QuoteResponse,
+  SupportedChain,
+  SupportedToken,
+  WalletProvider,
+} from "./types";
 
 type FetchBalancesResponse = {
-  primaryAddress: string;
+  provider: WalletProvider;
+  address: string;
   chainConnections: SupportedChain[];
   intents: BalanceIntent[];
 };
@@ -11,6 +18,12 @@ const chainDisplayName: Record<SupportedChain, string> = {
   arbitrum: "Arbitrum",
   solana: "Solana",
   monad: "Monad",
+};
+
+const providerDisplayName: Record<WalletProvider, string> = {
+  metamask: "MetaMask",
+  phantom: "Phantom",
+  backpack: "Backpack",
 };
 
 const tokenDecimals: Record<SupportedToken, number> = {
@@ -28,112 +41,182 @@ const formatAmount = (amount: number, token: SupportedToken) => {
   })} ${token.toUpperCase()}`;
 };
 
-const MOCK_INTENTS: BalanceIntent[] = [
-  {
-    id: "intent_eth_usdc_mon",
-    sourceChain: "ethereum",
-    sourceToken: "usdc",
-    destinationChain: "monad",
-    destinationToken: "mon",
-    availableAmount: 1250.52,
-    availableFormatted: formatAmount(1250.52, "usdc"),
-    usdValue: 1250.52,
-    feeBps: 12,
-    etaMinutes: 7,
-  },
-  {
-    id: "intent_arb_usdc_mon",
-    sourceChain: "arbitrum",
-    sourceToken: "usdc",
-    destinationChain: "monad",
-    destinationToken: "mon",
-    availableAmount: 483.1,
-    availableFormatted: formatAmount(483.1, "usdc"),
-    usdValue: 483.1,
-    feeBps: 8,
-    etaMinutes: 4,
-  },
-  {
-    id: "intent_sol_usdc_mon",
-    sourceChain: "solana",
-    sourceToken: "usdc",
-    destinationChain: "monad",
-    destinationToken: "mon",
-    availableAmount: 920.75,
-    availableFormatted: formatAmount(920.75, "usdc"),
-    usdValue: 920.75,
-    feeBps: 15,
-    etaMinutes: 6,
-  },
-  {
-    id: "intent_mon_mon_usdc_eth",
-    sourceChain: "monad",
-    sourceToken: "mon",
-    destinationChain: "ethereum",
-    destinationToken: "usdc",
-    availableAmount: 1500,
-    availableFormatted: formatAmount(1500, "mon"),
-    usdValue: 1500,
-    feeBps: 18,
-    etaMinutes: 9,
-  },
-];
+type BaseIntent = Omit<BalanceIntent, "id" | "availableFormatted" | "provider"> & {
+  id: string;
+};
 
-export async function fetchBalances(): Promise<FetchBalancesResponse> {
-  await sleep(350);
+const BASE_INTENTS: Record<WalletProvider, BaseIntent[]> = {
+  metamask: [
+    {
+      id: "eth_usdc_mon",
+      sourceChain: "ethereum",
+      sourceToken: "usdc",
+      destinationChain: "monad",
+      destinationToken: "mon",
+      availableAmount: 1250.52,
+      usdValue: 1250.52,
+      feeBps: 12,
+      etaMinutes: 7,
+    },
+    {
+      id: "arb_usdc_mon",
+      sourceChain: "arbitrum",
+      sourceToken: "usdc",
+      destinationChain: "monad",
+      destinationToken: "mon",
+      availableAmount: 483.1,
+      usdValue: 483.1,
+      feeBps: 8,
+      etaMinutes: 4,
+    },
+    {
+      id: "mon_mon_usdc_eth",
+      sourceChain: "monad",
+      sourceToken: "mon",
+      destinationChain: "ethereum",
+      destinationToken: "usdc",
+      availableAmount: 1500,
+      usdValue: 1500,
+      feeBps: 18,
+      etaMinutes: 9,
+    },
+  ],
+  phantom: [
+    {
+      id: "sol_usdc_mon",
+      sourceChain: "solana",
+      sourceToken: "usdc",
+      destinationChain: "monad",
+      destinationToken: "mon",
+      availableAmount: 920.75,
+      usdValue: 920.75,
+      feeBps: 15,
+      etaMinutes: 6,
+    },
+    {
+      id: "mon_mon_usdc_sol",
+      sourceChain: "monad",
+      sourceToken: "mon",
+      destinationChain: "solana",
+      destinationToken: "usdc",
+      availableAmount: 640,
+      usdValue: 640,
+      feeBps: 20,
+      etaMinutes: 8,
+    },
+  ],
+  backpack: [
+    {
+      id: "sol_usdc_mon_backpack",
+      sourceChain: "solana",
+      sourceToken: "usdc",
+      destinationChain: "monad",
+      destinationToken: "mon",
+      availableAmount: 412.34,
+      usdValue: 412.34,
+      feeBps: 14,
+      etaMinutes: 5,
+    },
+    {
+      id: "mon_mon_usdc_sol_backpack",
+      sourceChain: "monad",
+      sourceToken: "mon",
+      destinationChain: "solana",
+      destinationToken: "usdc",
+      availableAmount: 860.12,
+      usdValue: 860.12,
+      feeBps: 19,
+      etaMinutes: 8,
+    },
+  ],
+};
+
+const PROVIDER_CHAINS: Record<WalletProvider, SupportedChain[]> = {
+  metamask: ["ethereum", "arbitrum"],
+  phantom: ["solana"],
+  backpack: ["solana"],
+};
+
+const buildIntent = (provider: WalletProvider, base: BaseIntent): BalanceIntent => ({
+  ...base,
+  id: `${provider}:${base.id}`,
+  availableFormatted: formatAmount(base.availableAmount, base.sourceToken),
+  provider,
+});
+
+const getBaseIntent = (intentId: string): { provider: WalletProvider; intent: BaseIntent } => {
+  const [providerKey, rawId] = intentId.split(":") as [WalletProvider, string];
+  const intents = BASE_INTENTS[providerKey];
+  if (!intents) {
+    throw new Error("Unknown provider");
+  }
+  const intent = intents.find((item) => item.id === rawId);
+  if (!intent) {
+    throw new Error("Intent not found");
+  }
+  return { provider: providerKey, intent };
+};
+
+export async function fetchBalances(
+  provider: WalletProvider,
+  address: string,
+  chains?: SupportedChain[]
+): Promise<FetchBalancesResponse> {
+  await sleep(320);
+  const intents = BASE_INTENTS[provider].map((intent) => buildIntent(provider, intent));
 
   return {
-    primaryAddress: "0x1284...9af3",
-    chainConnections: ["ethereum", "arbitrum", "solana"],
-    intents: MOCK_INTENTS,
+    provider,
+    address,
+    chainConnections: chains ?? PROVIDER_CHAINS[provider],
+    intents,
   };
 }
 
 export async function fetchQuote(intentId: string, amount: number): Promise<QuoteResponse> {
-  await sleep(280);
-  const intent = MOCK_INTENTS.find((item) => item.id === intentId);
-  if (!intent) {
-    throw new Error("Intent not found");
-  }
+  await sleep(260);
+  const { provider, intent } = getBaseIntent(intentId);
+  const baseIntent = buildIntent(provider, intent);
 
-  const cappedAmount = Math.min(amount, intent.availableAmount);
-  const fee = (intent.feeBps / 10000) * cappedAmount;
-  const rate = intent.destinationToken === "mon" ? 1 / 1.02 : 1;
+  const cappedAmount = Math.min(amount, baseIntent.availableAmount);
+  const fee = (baseIntent.feeBps / 10000) * cappedAmount;
+  const rate = baseIntent.destinationToken === "mon" ? 1 / 1.02 : 1;
   const destinationAmount = (cappedAmount - fee) * rate;
 
   return {
-    intentId,
+    intentId: baseIntent.id,
     sourceAmount: cappedAmount,
     destinationAmount,
     feeAmount: fee,
-    feeCurrency: intent.sourceToken,
+    feeCurrency: baseIntent.sourceToken,
     rate,
     expiresAt: Date.now() + 60_000,
   };
 }
 
 export async function submitBridge(intentId: string, amount: number) {
-  await sleep(600);
-  const intent = MOCK_INTENTS.find((item) => item.id === intentId);
-  if (!intent) {
-    throw new Error("Intent not found");
-  }
+  await sleep(520);
+  const { provider, intent } = getBaseIntent(intentId);
+  const baseIntent = buildIntent(provider, intent);
 
-  const sanitizedAmount = Math.max(0, Math.min(amount, intent.availableAmount));
+  const sanitizedAmount = Math.max(0, Math.min(amount, baseIntent.availableAmount));
   const status =
-    sanitizedAmount <= intent.availableAmount * 0.1
+    sanitizedAmount <= baseIntent.availableAmount * 0.1
       ? ("awaiting_source" as const)
       : ("pending_settlement" as const);
-  const nextStatus: QuoteResponse["intentId"] = intentId;
-  const txHash = `0x${Math.random().toString(16).slice(2, 10)}${Math.random()
-    .toString(16)
-    .slice(2, 10)}`;
+  const txHash =
+    provider === "phantom" || provider === "backpack"
+      ? `5${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 8)}`
+      : `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
 
   return {
-    intentId: nextStatus,
+    intentId: baseIntent.id,
     txHash,
     status,
   };
 }
 
 export const chainLabel = (chain: SupportedChain) => chainDisplayName[chain] ?? chain;
+
+export const providerLabel = (provider: WalletProvider) =>
+  providerDisplayName[provider] ?? provider;

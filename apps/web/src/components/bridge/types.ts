@@ -2,6 +2,8 @@ export type SupportedChain = "ethereum" | "arbitrum" | "solana" | "monad";
 
 export type SupportedToken = "usdc" | "usdt" | "mon";
 
+export type WalletProvider = "metamask" | "phantom" | "backpack";
+
 export interface BalanceIntent {
   id: string;
   sourceChain: SupportedChain;
@@ -13,6 +15,7 @@ export interface BalanceIntent {
   usdValue: number;
   feeBps: number;
   etaMinutes: number;
+  provider: WalletProvider;
 }
 
 export interface QuoteResponse {
@@ -32,7 +35,7 @@ export interface BridgeSubmission {
 
 export interface BridgeState {
   isConnected: boolean;
-  primaryAddress?: string;
+  connectedWallets: WalletConnection[];
   chainConnections: SupportedChain[];
   intents: BalanceIntent[];
   selectedIntent?: BalanceIntent;
@@ -42,9 +45,16 @@ export interface BridgeState {
   error?: string;
 }
 
+export interface WalletConnection {
+  provider: WalletProvider;
+  address: string;
+  chains: SupportedChain[];
+}
+
 export interface BridgeActions {
-  connectWallet: () => Promise<void>;
-  disconnect: () => void;
+  connectProvider: (provider: WalletProvider) => Promise<void>;
+  disconnectAll: () => Promise<void>;
+  removeProvider: (provider: WalletProvider) => Promise<void>;
   refreshBalances: () => Promise<void>;
   selectIntent: (intent: BalanceIntent | undefined) => void;
   requestQuote: (intentId: string, amount: number) => Promise<void>;

@@ -41,7 +41,7 @@
 - `AmountSheet` – controlled modal/sheet for entering amount & viewing quote.
 - `BridgeReview` – summary and confirm button.
 - `BridgeStatusBar` – inline status after submission (show mock progress).
-- `useBridgeState` – hook managing wallet connection, balances (mocked), selected intent, quotes.
+- `useBridgeState` – hook managing wallet connection (MetaMask SDK, Phantom/Backpack adapters), balances (mocked for now), selected intent, quotes.
 - `mockBridgeClient` – placeholder fetching balances, quotes, gas/fee estimates.
 
 ## Data Model (Frontend)

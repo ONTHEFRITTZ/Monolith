@@ -9,6 +9,12 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0"
   },
   "dependencies": {
+    "@metamask/sdk": "^0.14.4",
+    "@solana/wallet-adapter-backpack": "^0.1.14",
+    "@solana/wallet-adapter-base": "^0.9.24",
+    "@solana/wallet-adapter-phantom": "^0.9.31",
+    "@solana/web3.js": "^1.95.3",
+    "ethers": "^6.13.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "next": "16.0.1"

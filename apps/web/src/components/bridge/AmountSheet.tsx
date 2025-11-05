@@ -1,6 +1,6 @@
 import styles from "./BridgeFlow.module.css";
 import type { BalanceIntent, BridgeSubmission, QuoteResponse } from "./types";
-import { chainLabel } from "./mockBridgeClient";
+import { chainLabel, providerLabel } from "./mockBridgeClient";
 
 interface AmountSheetProps {
   open: boolean;
@@ -35,8 +35,9 @@ export function AmountSheet({
     return null;
   }
 
-  const displayLabel = `${intent.sourceToken.toUpperCase()} ${chainLabel(intent.sourceChain)} → ${intent.destinationToken.toUpperCase()} ${chainLabel(intent.destinationChain)}`;
+  const displayLabel = `${intent.sourceToken.toUpperCase()} · ${chainLabel(intent.sourceChain)} → ${intent.destinationToken.toUpperCase()} · ${chainLabel(intent.destinationChain)}`;
   const amountNumber = Number(amountInput) || 0;
+  const actionLabel = quote ? `Sign with ${providerLabel(intent.provider)}` : "Preview Bridge";
 
   return (
     <div className={styles.sheetOverlay} role="dialog" aria-modal="true">
@@ -44,7 +45,9 @@ export function AmountSheet({
         <div className={styles.sheetHeader}>
           <div>
             <h2 className={styles.sheetTitle}>Bridge {intent.sourceToken.toUpperCase()}</h2>
-            <p className={styles.intentSubtitle}>{displayLabel}</p>
+            <p className={styles.intentSubtitle}>
+              {displayLabel} · {providerLabel(intent.provider)}
+            </p>
           </div>
           <button
             type="button"
@@ -137,7 +140,7 @@ export function AmountSheet({
             onClick={onPreview}
             disabled={isLoading || amountNumber <= 0}
           >
-            {isLoading ? "Loading..." : "Preview Bridge"}
+            {isLoading ? "Loading..." : actionLabel}
           </button>
         ) : (
           <button
@@ -146,7 +149,7 @@ export function AmountSheet({
             onClick={onConfirm}
             disabled={isLoading || amountNumber <= 0 || submission?.status === "pending_settlement"}
           >
-            {isLoading ? "Submitting..." : "Sign & Bridge"}
+            {isLoading ? "Submitting..." : actionLabel}
           </button>
         )}
       </div>

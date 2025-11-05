@@ -2,10 +2,19 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { fetchBalances, fetchQuote, submitBridge } from "./mockBridgeClient";
-import type { BalanceIntent, BridgeActions, BridgeState } from "./types";
+import type {
+  BalanceIntent,
+  BridgeActions,
+  BridgeState,
+  SupportedChain,
+  WalletConnection,
+  WalletProvider,
+} from "./types";
+import { getConnector } from "@/lib/wallets/connectors";
 
 const defaultState: BridgeState = {
   isConnected: false,
+  connectedWallets: [],
   chainConnections: [],
   intents: [],
   isLoading: false,
@@ -14,21 +23,34 @@ const defaultState: BridgeState = {
 export function useBridgeState(): { state: BridgeState; actions: BridgeActions } {
   const [state, setState] = useState<BridgeState>(defaultState);
 
-  const connectWallet = useCallback(async () => {
+  const connectProvider = useCallback(async (provider: WalletProvider) => {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-      const response = await fetchBalances();
+
+      const connector = getConnector(provider);
+      const { address, chains } = await connector.connect();
+      const response = await fetchBalances(provider, address, chains);
+
       setState((prev) => ({
         ...prev,
         isConnected: true,
-        primaryAddress: response.primaryAddress,
-        chainConnections: response.chainConnections,
-        intents: response.intents,
+        connectedWallets: mergeWalletConnections(prev.connectedWallets, {
+          provider,
+          address: response.address,
+          chains: response.chainConnections,
+        }),
+        chainConnections: unionChains(prev.chainConnections, response.chainConnections),
+        intents: mergeIntents(prev.intents, response.intents, provider),
         isLoading: false,
         error: undefined,
       }));
     } catch (error) {
       console.error(error);
+      try {
+        await getConnector(provider).disconnect();
+      } catch {
+        // ignore disconnect errors
+      }
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -38,16 +60,38 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
   }, []);
 
   const refreshBalances = useCallback(async () => {
-    if (!state.isConnected) {
+    if (!state.isConnected || state.connectedWallets.length === 0) {
       return;
     }
+
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-      const response = await fetchBalances();
+
+      const responses = await Promise.all(
+        state.connectedWallets.map((wallet) =>
+          fetchBalances(wallet.provider, wallet.address, wallet.chains)
+        )
+      );
+
+      const nextWallets: WalletConnection[] = responses.map((response) => ({
+        provider: response.provider,
+        address: response.address,
+        chains: response.chainConnections,
+      }));
+
+      const nextIntents = responses.flatMap((response) => response.intents);
+      const nextChains = responses
+        .map((response) => response.chainConnections)
+        .reduce<Set<SupportedChain>>((acc, chains) => {
+          chains.forEach((chain) => acc.add(chain));
+          return acc;
+        }, new Set<SupportedChain>());
+
       setState((prev) => ({
         ...prev,
-        intents: response.intents,
-        chainConnections: response.chainConnections,
+        connectedWallets: nextWallets,
+        intents: nextIntents,
+        chainConnections: Array.from(nextChains),
         isLoading: false,
         error: undefined,
       }));
@@ -59,7 +103,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
         error: "Failed to refresh balances.",
       }));
     }
-  }, [state.isConnected]);
+  }, [state.connectedWallets, state.isConnected]);
 
   const selectIntent = useCallback((intent: BalanceIntent | undefined) => {
     setState((prev) => ({
@@ -112,8 +156,47 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
     }
   }, []);
 
-  const disconnect = useCallback(() => {
+  const disconnectAll = useCallback(async () => {
+    await Promise.all(
+      state.connectedWallets.map((wallet) => {
+        const connector = getConnector(wallet.provider);
+        return connector.disconnect();
+      })
+    );
     setState(defaultState);
+  }, [state.connectedWallets]);
+
+  const removeProvider = useCallback(async (provider: WalletProvider) => {
+    try {
+      await getConnector(provider).disconnect();
+    } catch (error) {
+      console.error(error);
+    }
+
+    setState((prev) => {
+      const remainingWallets = prev.connectedWallets.filter(
+        (wallet) => wallet.provider !== provider
+      );
+      const remainingIntents = prev.intents.filter((intent) => intent.provider !== provider);
+      const remainingChains = Array.from(
+        new Set(remainingWallets.flatMap((wallet) => wallet.chains))
+      ) as SupportedChain[];
+      const nextSelected =
+        prev.selectedIntent && prev.selectedIntent.provider === provider
+          ? undefined
+          : prev.selectedIntent;
+
+      return {
+        ...prev,
+        connectedWallets: remainingWallets,
+        chainConnections: remainingChains,
+        intents: remainingIntents,
+        selectedIntent: nextSelected,
+        quote: nextSelected ? prev.quote : undefined,
+        submission: nextSelected ? prev.submission : undefined,
+        isConnected: remainingWallets.length > 0,
+      };
+    });
   }, []);
 
   const resetSubmission = useCallback(() => {
@@ -130,8 +213,9 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
 
   const actions = useMemo<BridgeActions>(
     () => ({
-      connectWallet,
-      disconnect,
+      connectProvider,
+      disconnectAll,
+      removeProvider,
       refreshBalances,
       selectIntent,
       requestQuote,
@@ -141,10 +225,11 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
     }),
     [
       clearError,
-      connectWallet,
-      disconnect,
+      connectProvider,
+      disconnectAll,
       handleSubmit,
       refreshBalances,
+      removeProvider,
       requestQuote,
       resetSubmission,
       selectIntent,
@@ -152,4 +237,26 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
   );
 
   return { state, actions };
+}
+
+function mergeWalletConnections(
+  existing: WalletConnection[],
+  incoming: WalletConnection
+): WalletConnection[] {
+  const filtered = existing.filter((wallet) => wallet.provider !== incoming.provider);
+  return [...filtered, incoming];
+}
+
+function mergeIntents(
+  existing: BalanceIntent[],
+  incoming: BalanceIntent[],
+  provider: WalletProvider
+): BalanceIntent[] {
+  const filtered = existing.filter((intent) => intent.provider !== provider);
+  return [...filtered, ...incoming];
+}
+
+function unionChains(existing: SupportedChain[], incoming: SupportedChain[]): SupportedChain[] {
+  const set = new Set<SupportedChain>([...existing, ...incoming]);
+  return Array.from(set);
 }
