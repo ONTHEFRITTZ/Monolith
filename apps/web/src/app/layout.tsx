@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Geist_Mono } from "next/font/google";
+import { Oxanium, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const headingFont = Space_Grotesk({
+const headingFont = Oxanium({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
