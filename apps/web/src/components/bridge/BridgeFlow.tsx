@@ -37,7 +37,6 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   backpack: "/logos/backpack.png",
 };
 export function BridgeFlow() {
-  const { state, actions } = useBridgeState();
   const router = useRouter();
   const [profile, setProfile] = useState<StoredProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -53,6 +52,8 @@ export function BridgeFlow() {
   const [planUpdating, setPlanUpdating] = useState(false);
   const [settingsUpdating, setSettingsUpdating] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const sessionId = profile?.sessionId;
+  const { state, actions } = useBridgeState(sessionId);
 
   const handleGuestContinue = useCallback(() => {
     clearProfileStorage();
@@ -219,6 +220,12 @@ export function BridgeFlow() {
   }, [profile]);
 
   const handleSelect = (intent: BalanceIntent) => {
+    if (guestMode) {
+      setProfileError(
+        "Sign in to bridge with Monolith sponsorship. Onboarding unlocks the paymaster."
+      );
+      return;
+    }
     actions.selectIntent(intent);
     setAmountInput("");
     setSlippage(0.5);
@@ -321,7 +328,7 @@ export function BridgeFlow() {
     !state.isConnected || state.connectedWallets.length === 0
       ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
       : guestMode
-        ? "Guest bridging active \u2014 standard routing fee applies. Upgrade to claim sponsorship."
+        ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
         : "Select a balance below to bridge into Monad.";
 
   const orderedConnections = useMemo(
@@ -340,9 +347,18 @@ export function BridgeFlow() {
     [state.connectedWallets]
   );
 
-  const handleProviderConnect = async (provider: WalletProvider) => {
-    await actions.connectProvider(provider);
-  };
+  const handleProviderConnect = useCallback(
+    async (provider: WalletProvider) => {
+      if (guestMode && state.connectedWallets.length > 0) {
+        setProfileError(
+          "Guests can only connect one wallet at a time. Disconnect to switch wallets."
+        );
+        return;
+      }
+      await actions.connectProvider(provider);
+    },
+    [actions, guestMode, state.connectedWallets.length]
+  );
 
   const renderWalletButtons = () => {
     if (state.connectedWallets.length > 0) {

@@ -1,11 +1,17 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BridgeIntent as PrismaBridgeIntent, Prisma } from '@prisma/client';
+import {
+  Account,
+  BridgeIntent as PrismaBridgeIntent,
+  Prisma,
+  Session,
+} from '@prisma/client';
 import { randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateIntentDto, IntentResponseDto } from './dto/create-intent.dto';
@@ -25,6 +31,7 @@ import {
   WalletProvider,
   WalletProviderValues,
 } from './types/bridge.types';
+import { LoginType, SponsorshipPlan } from '../aa/dto/onboard.dto';
 
 interface BaseIntentConfig {
   id: string;
@@ -43,6 +50,17 @@ interface DiscoveredBalance {
   token: SupportedToken;
   amount: number;
 }
+
+interface SessionContext {
+  session: SessionWithAccount;
+  accountId?: string | null;
+  plan: SponsorshipPlan;
+  allowanceUsd: number;
+  paymasterEnabled: boolean;
+  linkedProviders: Set<WalletProvider>;
+}
+
+type SessionWithAccount = Session & { account: Account | null };
 
 const PROVIDER_INTENT_CATALOG: Record<
   WalletProvider,
@@ -146,6 +164,16 @@ const TOKEN_DECIMALS: Record<SupportedToken, number> = {
 };
 
 const QUOTE_EXPIRY_MS = 60_000;
+const PLAN_ALLOWANCES_USD: Record<SponsorshipPlan, number> = {
+  [SponsorshipPlan.STARTER]: 50,
+  [SponsorshipPlan.PRO]: 250,
+  [SponsorshipPlan.SELF]: 0,
+};
+const PROVIDER_LABEL: Record<WalletProvider, string> = {
+  metamask: 'MetaMask',
+  phantom: 'Phantom',
+  backpack: 'Backpack',
+};
 
 function isWalletProvider(value: string): value is WalletProvider {
   return (WalletProviderValues as readonly string[]).includes(value);
@@ -466,8 +494,10 @@ export class BridgeService {
     providerInput: string,
     address: string,
     chains?: SupportedChain[],
+    sessionId?: string,
   ): Promise<ProviderBalancesResponseDto> {
     const provider = this.assertWalletProvider(providerInput);
+    await this.resolveSessionContext(sessionId, provider, { optional: true });
     const requestedChains =
       chains && chains.length > 0 ? chains : (PROVIDER_CHAINS[provider] ?? []);
     let chainConnections = Array.from(new Set(requestedChains));
@@ -577,9 +607,16 @@ export class BridgeService {
   async quoteIntent(
     intentId: string,
     amount: number,
+    sessionId?: string,
     _slippageBps?: number,
   ): Promise<QuoteResponseDto> {
     const { provider, base } = this.resolveBaseIntent(intentId);
+    const sessionCtx = await this.resolveSessionContext(sessionId, provider);
+    if (!sessionCtx) {
+      throw new BadRequestException(
+        'Session context is required to generate a sponsored quote. Sign in first.',
+      );
+    }
     const sanitizedAmount = this.sanitizeAmount(amount, base.availableAmount);
     if (sanitizedAmount <= 0) {
       throw new BadRequestException(
@@ -595,6 +632,9 @@ export class BridgeService {
       sanitizedAmount,
       base.feeBps,
     );
+
+    const usdAmount = sanitizedAmount * quote.sourceUsdPrice;
+    await this.assertAllowance(sessionCtx, usdAmount);
 
     const feeAmount = (base.feeBps / 10_000) * sanitizedAmount;
     const netAmount = sanitizedAmount - feeAmount;
@@ -615,9 +655,16 @@ export class BridgeService {
   async submitIntent(
     intentId: string,
     amount: number,
+    sessionId?: string,
     _slippageBps?: number,
   ): Promise<SubmitBridgeResponseDto> {
     const { provider, base } = this.resolveBaseIntent(intentId);
+    const sessionCtx = await this.resolveSessionContext(sessionId, provider);
+    if (!sessionCtx) {
+      throw new BadRequestException(
+        'Session context is required to submit sponsored bridge intents. Sign in first.',
+      );
+    }
     const sanitizedAmount = this.sanitizeAmount(amount, base.availableAmount);
     if (sanitizedAmount <= 0) {
       throw new BadRequestException(
@@ -639,6 +686,9 @@ export class BridgeService {
       base.feeBps,
     );
 
+    const usdAmount = sanitizedAmount * quote.sourceUsdPrice;
+    await this.assertAllowance(sessionCtx, usdAmount);
+
     const record = await this.persistIntent({
       payload: {
         sourceChain: base.sourceChain,
@@ -650,6 +700,8 @@ export class BridgeService {
       quote,
       walletProvider: provider,
       status: this.mapSubmissionToIntentStatus(submissionStatus),
+      sessionId: sessionCtx.session.sessionId,
+      accountId: sessionCtx.accountId ?? undefined,
     });
 
     const txHash = this.generateTxHash(base.sourceChain);
@@ -689,6 +741,8 @@ export class BridgeService {
     walletProvider?: WalletProvider;
     status?: BridgeIntentStatus;
     intentId?: string;
+    sessionId?: string;
+    accountId?: string;
   }): Promise<PrismaBridgeIntent> {
     const intentId = params.intentId ?? randomUUID();
 
@@ -710,6 +764,8 @@ export class BridgeService {
           params.quote.destinationUsdPrice,
         ),
         sourceUsdPrice: new Prisma.Decimal(params.quote.sourceUsdPrice),
+        sessionId: params.sessionId,
+        accountId: params.accountId ?? null,
       },
       create: {
         intentId,
@@ -728,8 +784,152 @@ export class BridgeService {
           params.quote.destinationUsdPrice,
         ),
         sourceUsdPrice: new Prisma.Decimal(params.quote.sourceUsdPrice),
+        sessionId: params.sessionId,
+        accountId: params.accountId ?? null,
       },
     });
+  }
+
+  private async resolveSessionContext(
+    sessionId?: string,
+    requiredProvider?: WalletProvider,
+    options?: { optional?: boolean },
+  ): Promise<SessionContext | null> {
+    if (!sessionId) {
+      if (options?.optional) {
+        return null;
+      }
+      throw new BadRequestException(
+        'Session context is required to use sponsored bridging. Sign in first.',
+      );
+    }
+
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId },
+      include: { account: true },
+    });
+
+    if (!session) {
+      if (options?.optional) {
+        return null;
+      }
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    const planRaw = session.sponsorshipPlan as SponsorshipPlan | null;
+    const plan =
+      planRaw && Object.values(SponsorshipPlan).includes(planRaw)
+        ? planRaw
+        : SponsorshipPlan.STARTER;
+    const allowanceUsd = PLAN_ALLOWANCES_USD[plan] ?? 0;
+    const paymasterEnabled = plan !== SponsorshipPlan.SELF;
+    const linkedProviders = this.extractLinkedProviders(session.linkedWallets);
+
+    if (
+      requiredProvider &&
+      !this.isProviderLinked(
+        requiredProvider,
+        linkedProviders,
+        session.loginType as LoginType | null,
+      )
+    ) {
+      throw new ForbiddenException(
+        `The ${PROVIDER_LABEL[requiredProvider]} wallet must be linked via onboarding before bridging.`,
+      );
+    }
+
+    return {
+      session,
+      accountId: session.accountId ?? session.account?.id ?? null,
+      plan,
+      allowanceUsd,
+      paymasterEnabled,
+      linkedProviders,
+    };
+  }
+
+  private async assertAllowance(
+    context: SessionContext | null,
+    additionalUsd: number,
+  ): Promise<void> {
+    if (!context || context.allowanceUsd <= 0) {
+      return;
+    }
+
+    if (!context.accountId) {
+      this.logger.warn(
+        `Missing account linkage for session ${context.session.sessionId}; skipping allowance enforcement.`,
+      );
+      return;
+    }
+
+    const windowStart = this.startOfCurrentMonth();
+
+    const intents = await this.prisma.bridgeIntent.findMany({
+      where: {
+        accountId: context.accountId,
+        createdAt: { gte: windowStart },
+        status: { not: 'failed' },
+      },
+      select: {
+        amount: true,
+        sourceUsdPrice: true,
+      },
+    });
+
+    const consumedUsd = intents.reduce((total, record) => {
+      const amount = Number(record.amount ?? 0);
+      const price = Number(record.sourceUsdPrice ?? 0);
+      return total + amount * price;
+    }, 0);
+
+    if (consumedUsd + additionalUsd - context.allowanceUsd > 0.01) {
+      throw new BadRequestException(
+        'Sponsorship allowance exceeded for this plan. Upgrade or wait for the next billing cycle.',
+      );
+    }
+  }
+
+  private startOfCurrentMonth(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  }
+
+  private extractLinkedProviders(
+    value: Prisma.JsonValue | null | undefined,
+  ): Set<WalletProvider> {
+    const providers = new Set<WalletProvider>();
+    if (!Array.isArray(value)) {
+      return providers;
+    }
+
+    value.forEach((item) => {
+      if (!item || typeof item !== 'object') {
+        return;
+      }
+      const providerRaw = (item as Record<string, unknown>).provider;
+      if (typeof providerRaw === 'string' && isWalletProvider(providerRaw)) {
+        providers.add(providerRaw);
+      }
+    });
+
+    return providers;
+  }
+
+  private isProviderLinked(
+    provider: WalletProvider,
+    linkedProviders: Set<WalletProvider>,
+    loginType: LoginType | null,
+  ): boolean {
+    if (linkedProviders.has(provider)) {
+      return true;
+    }
+
+    if (provider === 'metamask' && loginType === LoginType.METAMASK) {
+      return true;
+    }
+
+    return false;
   }
 
   private mapIntentToResponse(intent: PrismaBridgeIntent): IntentResponseDto {

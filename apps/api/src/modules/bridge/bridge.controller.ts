@@ -30,6 +30,7 @@ export class BridgeController {
       provider,
       payload.address,
       payload.chainConnections,
+      payload.sessionId,
     );
   }
 
@@ -38,6 +39,7 @@ export class BridgeController {
     return this.bridgeService.quoteIntent(
       payload.intentId,
       payload.amount,
+      payload.sessionId,
       payload.slippageBps,
     );
   }
@@ -49,6 +51,7 @@ export class BridgeController {
     return this.bridgeService.submitIntent(
       payload.intentId,
       payload.amount,
+      payload.sessionId,
       payload.slippageBps,
     );
   }

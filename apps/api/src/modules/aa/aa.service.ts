@@ -181,7 +181,10 @@ export class AaService {
       linkedWallets: mapLinkedWallets(session.linkedWallets),
       sponsorshipPlan: plan,
       sponsorship: sponsorshipPlans[plan],
-      paymasterPolicyId: session.paymasterPolicyId ?? undefined,
+      paymasterPolicyId:
+        plan === SponsorshipPlan.SELF
+          ? undefined
+          : (session.paymasterPolicyId ?? undefined),
       sponsorshipTermsVersion:
         metadata.version ?? session.sponsorshipTerms ?? undefined,
       socialLogins: metadata.socialLogins,
@@ -193,9 +196,17 @@ export class AaService {
     sessionId: string,
     payload: UpdatePlanRequestDto,
   ): Promise<ProfileResponseDto> {
+    const paymasterPolicyId =
+      payload.plan === SponsorshipPlan.SELF
+        ? null
+        : (this.config.get<string>('PAYMASTER_POLICY_ID') ?? null);
+
     await this.prisma.session.update({
       where: { sessionId },
-      data: { sponsorshipPlan: payload.plan },
+      data: {
+        sponsorshipPlan: payload.plan,
+        paymasterPolicyId,
+      },
     });
 
     return this.getProfile(sessionId);
@@ -267,6 +278,10 @@ export class AaService {
       accountIntent.socialLogins,
       accountIntent.preferences,
     );
+    const paymasterPolicyId =
+      sponsorship.plan === SponsorshipPlan.SELF
+        ? null
+        : (this.config.get<string>('PAYMASTER_POLICY_ID') ?? null);
     const linkedWalletsJson = linkedWallets.map((wallet) => ({
       provider: wallet.provider,
       address: wallet.address,
@@ -291,6 +306,7 @@ export class AaService {
         sponsorshipPlan: sponsorship.plan,
         sponsorshipTerms: sponsorshipTerms ?? sponsorship.acceptedTermsVersion,
         linkedWallets: linkedWalletsJson,
+        paymasterPolicyId,
       },
     });
 
@@ -305,7 +321,7 @@ export class AaService {
 
     return {
       smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId: session.paymasterPolicyId ?? '',
+      paymasterPolicyId: paymasterPolicyId ?? '',
       status: 'completed',
     };
   }
@@ -320,19 +336,27 @@ export class AaService {
     }
 
     const metadata = decodeSponsorshipMetadata(session.sponsorshipTerms);
+    const plan =
+      session.sponsorshipPlan &&
+      Object.values(SponsorshipPlan).includes(
+        session.sponsorshipPlan as SponsorshipPlan,
+      )
+        ? (session.sponsorshipPlan as SponsorshipPlan)
+        : undefined;
 
     return {
       sessionId,
       status: session.status as StatusResponseDto['status'],
       smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId: session.paymasterPolicyId ?? undefined,
+      paymasterPolicyId:
+        plan === SponsorshipPlan.SELF
+          ? undefined
+          : (session.paymasterPolicyId ?? undefined),
       loginType: session.loginType as LoginType,
       ownerAddress: session.ownerAddress,
       email: session.email ?? undefined,
       linkedWallets: mapLinkedWallets(session.linkedWallets),
-      sponsorshipPlan: session.sponsorshipPlan
-        ? (session.sponsorshipPlan as SponsorshipPlan)
-        : undefined,
+      sponsorshipPlan: plan,
       sponsorshipTermsVersion:
         metadata.version ?? session.sponsorshipTerms ?? undefined,
       socialLogins: metadata.socialLogins,

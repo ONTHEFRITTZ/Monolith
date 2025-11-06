@@ -9,7 +9,7 @@ This checklist consolidates the remaining implementation items we have discussed
 - [x] Finalise the Neon `DATABASE_URL`, run `npm exec --workspace apps/api prisma migrate dev`, and swap all in-memory session/intent maps to Prisma (`AaService`, `BridgeService`).
 - [x] Persist onboarding flows (sessions, recovery contacts, linked wallets) via Prisma instead of local storage; ensure `readProfile` uses backend data when available.
 - [x] Expose profile endpoints to read and update plan preferences (`GET/PATCH /api/aa/profile/:sessionId`).
-- [ ] Wire the paymaster policy ID + API key into the Alchemy AA client so sponsorship limits and plan tiers are enforced server-side.
+- [x] Wire the paymaster policy ID + API key into the Alchemy AA client so sponsorship limits and plan tiers are enforced server-side.
 - [ ] Replace the mock AA onboarding responses with real Alchemy session lifecycle (status polling, recovery saves, sponsorship estimates).
 
 ## 2. Bridge Engine & Pricing

@@ -20,44 +20,47 @@ const defaultState: BridgeState = {
   isLoading: false,
 };
 
-export function useBridgeState(): { state: BridgeState; actions: BridgeActions } {
+export function useBridgeState(sessionId?: string): { state: BridgeState; actions: BridgeActions } {
   const [state, setState] = useState<BridgeState>(defaultState);
 
-  const connectProvider = useCallback(async (provider: WalletProvider) => {
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-
-      const connector = getConnector(provider);
-      const { address, chains } = await connector.connect();
-      const response = await fetchBalances(provider, address, chains);
-
-      setState((prev) => ({
-        ...prev,
-        isConnected: true,
-        connectedWallets: mergeWalletConnections(prev.connectedWallets, {
-          provider,
-          address: response.address,
-          chains: response.chainConnections,
-        }),
-        chainConnections: unionChains(prev.chainConnections, response.chainConnections),
-        intents: mergeIntents(prev.intents, response.intents, provider),
-        isLoading: false,
-        error: undefined,
-      }));
-    } catch (error) {
-      console.error(error);
+  const connectProvider = useCallback(
+    async (provider: WalletProvider) => {
       try {
-        await getConnector(provider).disconnect();
-      } catch {
-        // ignore disconnect errors
+        setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
+
+        const connector = getConnector(provider);
+        const { address, chains } = await connector.connect();
+        const response = await fetchBalances(provider, address, chains, sessionId);
+
+        setState((prev) => ({
+          ...prev,
+          isConnected: true,
+          connectedWallets: mergeWalletConnections(prev.connectedWallets, {
+            provider,
+            address: response.address,
+            chains: response.chainConnections,
+          }),
+          chainConnections: unionChains(prev.chainConnections, response.chainConnections),
+          intents: mergeIntents(prev.intents, response.intents, provider),
+          isLoading: false,
+          error: undefined,
+        }));
+      } catch (error) {
+        console.error(error);
+        try {
+          await getConnector(provider).disconnect();
+        } catch {
+          // ignore disconnect errors
+        }
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: "Unable to connect wallet. Please retry.",
+        }));
       }
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: "Unable to connect wallet. Please retry.",
-      }));
-    }
-  }, []);
+    },
+    [sessionId]
+  );
 
   const refreshBalances = useCallback(async () => {
     if (!state.isConnected || state.connectedWallets.length === 0) {
@@ -69,7 +72,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
 
       const responses = await Promise.all(
         state.connectedWallets.map((wallet) =>
-          fetchBalances(wallet.provider, wallet.address, wallet.chains)
+          fetchBalances(wallet.provider, wallet.address, wallet.chains, sessionId)
         )
       );
 
@@ -103,7 +106,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
         error: "Failed to refresh balances.",
       }));
     }
-  }, [state.connectedWallets, state.isConnected]);
+  }, [sessionId, state.connectedWallets, state.isConnected]);
 
   const selectIntent = useCallback((intent: BalanceIntent | undefined) => {
     setState((prev) => ({
@@ -119,7 +122,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
     async (intentId: string, amount: number, slippageBps?: number) => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-        const quote = await fetchQuote(intentId, amount, slippageBps);
+        const quote = await fetchQuote(intentId, amount, sessionId, slippageBps);
         setState((prev) => ({
           ...prev,
           quote,
@@ -137,14 +140,14 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
         }));
       }
     },
-    []
+    [sessionId]
   );
 
   const handleSubmit = useCallback(
     async (intentId: string, amount: number, slippageBps?: number) => {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-        const submission = await submitBridge(intentId, amount, slippageBps);
+        const submission = await submitBridge(intentId, amount, sessionId, slippageBps);
         setState((prev) => ({
           ...prev,
           submission: {
@@ -163,7 +166,7 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
         }));
       }
     },
-    []
+    [sessionId]
   );
 
   const disconnectAll = useCallback(async () => {

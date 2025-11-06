@@ -74,11 +74,13 @@ async function safeReadError(response: Response): Promise<string | undefined> {
 export async function fetchBalances(
   provider: WalletProvider,
   address: string,
-  chains?: SupportedChain[]
+  chains?: SupportedChain[],
+  sessionId?: string
 ): Promise<ProviderBalancesResponse> {
   const body = JSON.stringify({
     address,
     chainConnections: chains && chains.length > 0 ? chains : undefined,
+    sessionId,
   });
 
   return requestApi<ProviderBalancesResponse>(`/bridge/providers/${provider}/balances`, {
@@ -90,10 +92,13 @@ export async function fetchBalances(
 export async function fetchQuote(
   intentId: string,
   amount: number,
+  sessionId?: string,
   slippageBps?: number
 ): Promise<QuoteResponse> {
   const body = JSON.stringify(
-    slippageBps !== undefined ? { intentId, amount, slippageBps } : { intentId, amount }
+    slippageBps !== undefined
+      ? { intentId, amount, slippageBps, sessionId }
+      : { intentId, amount, sessionId }
   );
 
   return requestApi<QuoteResponse>("/bridge/quote", {
@@ -105,10 +110,13 @@ export async function fetchQuote(
 export async function submitBridge(
   intentId: string,
   amount: number,
+  sessionId?: string,
   slippageBps?: number
 ): Promise<BridgeSubmission> {
   const body = JSON.stringify(
-    slippageBps !== undefined ? { intentId, amount, slippageBps } : { intentId, amount }
+    slippageBps !== undefined
+      ? { intentId, amount, slippageBps, sessionId }
+      : { intentId, amount, sessionId }
   );
 
   const result = await requestApi<SubmitBridgeApiResponse>("/bridge/submit", {

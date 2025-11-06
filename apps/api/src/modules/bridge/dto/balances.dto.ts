@@ -28,6 +28,11 @@ export class ProviderBalancesRequestDto {
   address!: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  sessionId?: string;
+
+  @IsOptional()
   @IsArray()
   @IsIn(SupportedChainValues, { each: true })
   chainConnections?: SupportedChain[];
@@ -102,6 +107,11 @@ export class QuoteRequestDto {
   @IsNumber()
   @Min(0)
   slippageBps?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  sessionId?: string;
 }
 
 export class QuoteResponseDto {
@@ -144,6 +154,11 @@ export class SubmitBridgeRequestDto {
   @IsNumber()
   @Min(0)
   slippageBps?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  sessionId?: string;
 }
 
 export class SubmitBridgeResponseDto {
