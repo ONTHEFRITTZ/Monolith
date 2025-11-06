@@ -160,11 +160,13 @@ export function ProfileSettingsModal({
 
   const handleWalletRemoval = async (provider: WalletProvider) => {
     if (!profile) return;
+    const nextWallets = linkedWallets.filter((wallet) => wallet.provider !== provider);
     await onRemoveWallet(provider);
     onMutateProfile((current) => ({
       ...current,
-      linkedWallets: current.linkedWallets.filter((wallet) => wallet.provider !== provider),
+      linkedWallets: nextWallets,
     }));
+    await onSaveProfileSettings({ linkedWallets: nextWallets });
   };
 
   return (

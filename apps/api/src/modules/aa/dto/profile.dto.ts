@@ -1,4 +1,12 @@
-import { IsArray, IsEnum, IsIn, IsObject, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsEnum,
+  IsIn,
+  IsObject,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
 import { LinkedWalletDto, LoginType, SponsorshipPlan } from './onboard.dto';
 import { SponsorshipEstimateResponseDto } from './sponsorship.dto';
 
@@ -31,4 +39,10 @@ export class UpdateProfileSettingsRequestDto {
   @IsOptional()
   @IsObject()
   preferences?: Record<string, boolean>;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LinkedWalletDto)
+  linkedWallets?: LinkedWalletDto[];
 }

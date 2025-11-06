@@ -31,20 +31,23 @@ export function useBridgeState(sessionId?: string): { state: BridgeState; action
         const connector = getConnector(provider);
         const { address, chains } = await connector.connect();
         const response = await fetchBalances(provider, address, chains, sessionId);
+        const connection: WalletConnection = {
+          provider,
+          address: response.address,
+          chains: response.chainConnections,
+        };
 
         setState((prev) => ({
           ...prev,
           isConnected: true,
-          connectedWallets: mergeWalletConnections(prev.connectedWallets, {
-            provider,
-            address: response.address,
-            chains: response.chainConnections,
-          }),
+          connectedWallets: mergeWalletConnections(prev.connectedWallets, connection),
           chainConnections: unionChains(prev.chainConnections, response.chainConnections),
           intents: mergeIntents(prev.intents, response.intents, provider),
           isLoading: false,
           error: undefined,
         }));
+
+        return connection;
       } catch (error) {
         console.error(error);
         try {
@@ -55,8 +58,9 @@ export function useBridgeState(sessionId?: string): { state: BridgeState; action
         setState((prev) => ({
           ...prev,
           isLoading: false,
-          error: "Unable to connect wallet. Please retry.",
+          error: error instanceof Error ? error.message : "Unable to connect wallet. Please retry.",
         }));
+        return null;
       }
     },
     [sessionId]

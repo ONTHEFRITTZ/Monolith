@@ -78,13 +78,6 @@ export function BridgeFlow() {
     []
   );
 
-  const handleLinkWalletFromSettings = useCallback(
-    async (provider: WalletProvider) => {
-      await actions.connectProvider(provider);
-    },
-    [actions]
-  );
-
   const handleRemoveWalletFromSettings = useCallback(
     async (provider: WalletProvider) => {
       await actions.removeProvider(provider);
@@ -311,6 +304,35 @@ export function BridgeFlow() {
     [profile]
   );
 
+  const handleLinkWalletFromSettings = useCallback(
+    async (provider: WalletProvider) => {
+      const connection = await actions.connectProvider(provider);
+      if (!connection) {
+        return;
+      }
+
+      const linkedWallet: LinkedWallet = {
+        provider: connection.provider,
+        address: connection.address,
+        chains: connection.chains,
+      };
+
+      const nextWallets = mergeLinkedWalletEntries(profile?.linkedWallets ?? [], linkedWallet);
+
+      if (profile) {
+        handleProfileMutation((current) => ({
+          ...current,
+          linkedWallets: mergeLinkedWalletEntries(current.linkedWallets ?? [], linkedWallet),
+        }));
+      }
+
+      if (profile?.sessionId) {
+        await handleProfileSettingsSave({ linkedWallets: nextWallets });
+      }
+    },
+    [actions, handleProfileMutation, handleProfileSettingsSave, profile]
+  );
+
   const handleDismissStatus = () => {
     actions.resetSubmission();
     actions.clearError();
@@ -324,12 +346,16 @@ export function BridgeFlow() {
     actions.selectIntent(undefined);
   };
 
-  const connectedSummary =
-    !state.isConnected || state.connectedWallets.length === 0
-      ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
-      : guestMode
-        ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
-        : "Select a balance below to bridge into Monad.";
+  const connectedSummary = useMemo(() => {
+    if (!state.isConnected || state.connectedWallets.length === 0) {
+      return guestMode
+        ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
+        : "";
+    }
+    return guestMode
+      ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
+      : "Select a balance below to bridge into Monad.";
+  }, [guestMode, state.connectedWallets.length, state.isConnected]);
 
   const orderedConnections = useMemo(
     () =>
@@ -361,6 +387,9 @@ export function BridgeFlow() {
   );
 
   const renderWalletButtons = () => {
+    if (!guestMode) {
+      return null;
+    }
     if (state.connectedWallets.length > 0) {
       return null;
     }
@@ -397,123 +426,114 @@ export function BridgeFlow() {
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.utilityRail}>
-        <button type="button" className={styles.planButton} onClick={() => setPricingOpen(true)}>
-          Plans &amp; pricing
-        </button>
-
-        {guestMode ? (
-          <button
-            type="button"
-            className={styles.signInButton}
-            onClick={() => router.push("/onboarding")}
-          >
-            Sign in
-          </button>
-        ) : null}
-
-        {!guestMode && profile ? (
-          <button
-            type="button"
-            className={`${styles.profileButton} ${styles.profileButtonMobile}`}
-            onClick={() => setProfileSettingsOpen(true)}
-          >
-            Profile
-          </button>
-        ) : null}
-
-        {connectedCount > 0 ? (
-          <div className={styles.connectedPillFixed}>
-            <div className={styles.connectedPillRow}>
-              <span className={styles.connectedHeading}>
-                {connectedCount} wallet{connectedCount > 1 ? "s" : ""} connected
-              </span>
-              <div className={styles.connectedActions}>
-                {guestMode ? (
-                  <>
-                    <button
-                      type="button"
-                      className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
-                      onClick={() => router.push("/onboarding")}
-                      disabled={state.isLoading}
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
-                      onClick={() => void actions.disconnectAll()}
-                      disabled={state.isLoading}
-                    >
-                      Disconnect
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
-                      onClick={() => setProfileSettingsOpen(true)}
-                      disabled={state.isLoading}
-                    >
-                      Profile
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
-                      onClick={() => void actions.disconnectAll()}
-                      disabled={state.isLoading}
-                    >
-                      Disconnect
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-            <ul className={styles.connectedWalletList}>
-              {orderedConnections.map((wallet) => (
-                <li
-                  key={`${wallet.provider}:${wallet.address}`}
-                  className={styles.connectedWalletItem}
-                >
-                  <span className={styles.connectedWalletIcon}>
-                    <Image
-                      src={WALLET_LOGOS[wallet.provider]}
-                      alt={`${providerLabel(wallet.provider)} logo`}
-                      width={20}
-                      height={20}
-                    />
-                  </span>
-                  <div className={styles.connectedWalletText}>
-                    <span className={styles.connectedWalletProvider}>
-                      {providerLabel(wallet.provider)}
-                    </span>
-                    <span className={styles.connectedWalletAddress}>
-                      {shortAddress(wallet.address)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+      <header className={styles.headerBar}>
+        <div className={styles.headerLeft}>
+          <div className={styles.brandMark}>
+            <Image
+              src="/logos/monolith-bridge.png"
+              alt="Monolith Bridge"
+              width={170}
+              height={170}
+              priority
+            />
           </div>
-        ) : null}
-      </div>
-
-      <div className={styles.brandMark}>
-        <Image
-          src="/logos/monolith-bridge.png"
-          alt="Monolith Bridge"
-          width={140}
-          height={140}
-          priority
-        />
-      </div>
+          <button type="button" className={styles.planButton} onClick={() => setPricingOpen(true)}>
+            Plans &amp; pricing
+          </button>
+        </div>
+        <div className={styles.headerRight}>
+          {connectedCount > 0 ? (
+            <div className={styles.connectedPillFixed}>
+              <div className={styles.connectedPillRow}>
+                <span className={styles.connectedHeading}>
+                  {connectedCount} wallet{connectedCount > 1 ? "s" : ""} connected
+                </span>
+                <div className={styles.connectedActions}>
+                  {guestMode ? (
+                    <>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
+                        onClick={() => router.push("/onboarding")}
+                        disabled={state.isLoading}
+                      >
+                        Sign in
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
+                        onClick={() => void handleSignOut()}
+                        disabled={state.isLoading}
+                      >
+                        Disconnect
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
+                        onClick={() => setProfileSettingsOpen(true)}
+                        disabled={state.isLoading}
+                      >
+                        Profile
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
+                        onClick={() => void handleSignOut()}
+                        disabled={state.isLoading}
+                      >
+                        Disconnect
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <ul className={styles.connectedWalletList}>
+                {orderedConnections.map((wallet) => (
+                  <li
+                    key={`${wallet.provider}:${wallet.address}`}
+                    className={styles.connectedWalletItem}
+                  >
+                    <span className={styles.connectedWalletIcon}>
+                      <Image
+                        src={WALLET_LOGOS[wallet.provider]}
+                        alt={`${providerLabel(wallet.provider)} logo`}
+                        width={20}
+                        height={20}
+                      />
+                    </span>
+                    <div className={styles.connectedWalletText}>
+                      <span className={styles.connectedWalletProvider}>
+                        {providerLabel(wallet.provider)}
+                      </span>
+                      <span className={styles.connectedWalletAddress}>
+                        {shortAddress(wallet.address)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {guestMode ? (
+            <button
+              type="button"
+              className={styles.signInButton}
+              onClick={() => router.push("/onboarding")}
+            >
+              Sign in
+            </button>
+          ) : null}
+        </div>
+      </header>
 
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
           <h1 className={styles.headline}>BRIDGE</h1>
         </div>
-        <p className={styles.subline}>{connectedSummary}</p>
+        {connectedSummary ? <p className={styles.subline}>{connectedSummary}</p> : null}
 
         {renderWalletButtons()}
 
@@ -530,7 +550,7 @@ export function BridgeFlow() {
             <button
               type="button"
               className={styles.ghostButton}
-              onClick={() => void actions.disconnectAll()}
+              onClick={() => void handleSignOut()}
               disabled={state.isLoading}
             >
               Disconnect all
@@ -557,11 +577,11 @@ export function BridgeFlow() {
 
       {state.isConnected ? (
         <BalanceIntentList intents={state.intents} onSelect={handleSelect} />
-      ) : (
+      ) : guestMode ? (
         <p className={styles.subline}>
           We surface USDC balances from EVM and Solana wallets. Connect a provider to begin.
         </p>
-      )}
+      ) : null}
 
       {state.submission ? (
         <BridgeStatusBar submission={state.submission} onDismiss={handleDismissStatus} />
@@ -644,4 +664,26 @@ function areLinkedWalletsEqual(a: LinkedWallet[], b: LinkedWallet[]): boolean {
       item.provider === other.provider && item.address.toLowerCase() === other.address.toLowerCase()
     );
   });
+}
+
+function mergeLinkedWalletEntries(
+  existing: LinkedWallet[],
+  incoming: LinkedWallet
+): LinkedWallet[] {
+  const map = new Map<string, LinkedWallet>();
+  existing.forEach((wallet) => {
+    const key = `${wallet.provider}:${wallet.address.toLowerCase()}`;
+    map.set(key, {
+      ...wallet,
+      chains: Array.from(new Set(wallet.chains)),
+    });
+  });
+
+  const incomingKey = `${incoming.provider}:${incoming.address.toLowerCase()}`;
+  map.set(incomingKey, {
+    ...incoming,
+    chains: Array.from(new Set(incoming.chains)),
+  });
+
+  return Array.from(map.values());
 }

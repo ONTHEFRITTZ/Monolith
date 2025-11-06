@@ -1,6 +1,7 @@
 import MetaMaskSDK from "@metamask/sdk";
 import { BackpackWalletAdapter } from "@solana/wallet-adapter-backpack";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
+import { WalletNotReadyError, WalletReadyState } from "@solana/wallet-adapter-base";
 import type { SupportedChain, WalletProvider } from "@/components/bridge/types";
 
 export interface WalletConnectionResult {
@@ -70,8 +71,26 @@ export const phantomConnector: WalletConnector = {
     if (!phantomAdapter) {
       throw new Error("Phantom adapter unavailable.");
     }
+    if (
+      phantomAdapter.readyState !== WalletReadyState.Installed &&
+      phantomAdapter.readyState !== WalletReadyState.Loadable
+    ) {
+      throw new Error(
+        "Phantom wallet not detected. Install or open the Phantom extension to continue."
+      );
+    }
     if (!phantomAdapter.connected) {
-      await phantomAdapter.connect();
+      try {
+        await phantomAdapter.connect();
+      } catch (error) {
+        if (
+          error instanceof WalletNotReadyError ||
+          (error as { name?: string })?.name === "WalletNotReadyError"
+        ) {
+          throw new Error("Phantom wallet is not ready. Open the Phantom extension and try again.");
+        }
+        throw error instanceof Error ? error : new Error("Failed to connect Phantom wallet.");
+      }
     }
     if (!phantomAdapter.publicKey) {
       throw new Error("Phantom public key missing.");
@@ -94,8 +113,28 @@ export const backpackConnector: WalletConnector = {
     if (!backpackAdapter) {
       throw new Error("Backpack adapter unavailable.");
     }
+    if (
+      backpackAdapter.readyState !== WalletReadyState.Installed &&
+      backpackAdapter.readyState !== WalletReadyState.Loadable
+    ) {
+      throw new Error(
+        "Backpack wallet not detected. Install or open the Backpack extension to continue."
+      );
+    }
     if (!backpackAdapter.connected) {
-      await backpackAdapter.connect();
+      try {
+        await backpackAdapter.connect();
+      } catch (error) {
+        if (
+          error instanceof WalletNotReadyError ||
+          (error as { name?: string })?.name === "WalletNotReadyError"
+        ) {
+          throw new Error(
+            "Backpack wallet is not ready. Open the Backpack extension and try again."
+          );
+        }
+        throw error instanceof Error ? error : new Error("Failed to connect Backpack wallet.");
+      }
     }
     if (!backpackAdapter.publicKey) {
       throw new Error("Backpack public key missing.");

@@ -162,6 +162,16 @@ const TOKEN_DECIMALS: Record<SupportedToken, number> = {
   usdt: 6,
   mon: 18,
 };
+const SUPPORTED_CHAIN_VALUES: SupportedChain[] = [
+  'ethereum',
+  'arbitrum',
+  'solana',
+  'monad',
+];
+
+function isSupportedChainValue(value: string): value is SupportedChain {
+  return (SUPPORTED_CHAIN_VALUES as readonly string[]).includes(value);
+}
 
 const QUOTE_EXPIRY_MS = 60_000;
 const PLAN_ALLOWANCES_USD: Record<SponsorshipPlan, number> = {
@@ -497,7 +507,11 @@ export class BridgeService {
     sessionId?: string,
   ): Promise<ProviderBalancesResponseDto> {
     const provider = this.assertWalletProvider(providerInput);
-    await this.resolveSessionContext(sessionId, provider, { optional: true });
+    if (sessionId) {
+      await this.resolveSessionContext(sessionId, undefined, {
+        optional: true,
+      });
+    }
     const requestedChains =
       chains && chains.length > 0 ? chains : (PROVIDER_CHAINS[provider] ?? []);
     let chainConnections = Array.from(new Set(requestedChains));
@@ -548,6 +562,15 @@ export class BridgeService {
         }),
       );
       intents = enriched;
+    }
+
+    if (sessionId) {
+      await this.ensureProviderLinked(
+        sessionId,
+        provider,
+        address,
+        chainConnections,
+      );
     }
 
     return {
@@ -893,6 +916,161 @@ export class BridgeService {
   private startOfCurrentMonth(): Date {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  }
+
+  private async ensureProviderLinked(
+    sessionId: string,
+    provider: WalletProvider,
+    address: string,
+    chains: SupportedChain[],
+  ): Promise<void> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId },
+      select: {
+        linkedWallets: true,
+        accountId: true,
+        smartAccountAddress: true,
+      },
+    });
+
+    if (!session) {
+      return;
+    }
+
+    const normalizedAddress = address.toLowerCase();
+    const records = this.parseLinkedWalletRecords(session.linkedWallets);
+    const mergedChains = this.mergeChainLists([], chains);
+    let changed = false;
+
+    const nextRecords = records.map((wallet) => {
+      if (wallet.provider !== provider) {
+        return wallet;
+      }
+
+      if (wallet.address.toLowerCase() === normalizedAddress) {
+        const updatedChains = this.mergeChainLists(wallet.chains, mergedChains);
+        if (
+          updatedChains.length !== wallet.chains.length ||
+          updatedChains.some((chain, index) => chain !== wallet.chains[index])
+        ) {
+          changed = true;
+          return { provider, address, chains: updatedChains };
+        }
+        return wallet;
+      }
+
+      changed = true;
+      return { provider, address, chains: mergedChains };
+    });
+
+    const providerExists = records.some(
+      (wallet) => wallet.provider === provider,
+    );
+
+    let finalRecords = nextRecords;
+    if (!providerExists) {
+      changed = true;
+      finalRecords = [
+        ...nextRecords,
+        { provider, address, chains: mergedChains },
+      ];
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    const linkedWalletsJson = finalRecords.map((wallet) => ({
+      provider: wallet.provider,
+      address: wallet.address,
+      chains: wallet.chains,
+    })) as unknown as Prisma.JsonArray;
+
+    await this.prisma.session.update({
+      where: { sessionId },
+      data: { linkedWallets: linkedWalletsJson },
+    });
+
+    if (session.accountId) {
+      await this.prisma.account.update({
+        where: { id: session.accountId },
+        data: { linkedWallets: linkedWalletsJson },
+      });
+    } else {
+      try {
+        await this.prisma.account.update({
+          where: { smartAccountAddress: session.smartAccountAddress },
+          data: { linkedWallets: linkedWalletsJson },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to sync linked wallets for account ${session.smartAccountAddress}: ${(error as Error).message}`,
+        );
+      }
+    }
+  }
+
+  private parseLinkedWalletRecords(
+    value: Prisma.JsonValue | null | undefined,
+  ): Array<{
+    provider: WalletProvider;
+    address: string;
+    chains: SupportedChain[];
+  }> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const records: Array<{
+      provider: WalletProvider;
+      address: string;
+      chains: SupportedChain[];
+    }> = [];
+
+    value.forEach((item) => {
+      if (!item || typeof item !== 'object') {
+        return;
+      }
+      const entry = item as Record<string, unknown>;
+      const providerRaw = entry.provider;
+      const addressRaw = entry.address;
+      if (
+        typeof providerRaw === 'string' &&
+        isWalletProvider(providerRaw) &&
+        typeof addressRaw === 'string'
+      ) {
+        const chainsRaw = Array.isArray(entry.chains) ? entry.chains : [];
+        const chains = chainsRaw
+          .filter(
+            (chain): chain is SupportedChain =>
+              typeof chain === 'string' && isSupportedChainValue(chain),
+          )
+          .reduce<
+            SupportedChain[]
+          >((acc, chain) => (acc.includes(chain) ? acc : [...acc, chain]), []);
+
+        records.push({
+          provider: providerRaw,
+          address: addressRaw,
+          chains,
+        });
+      }
+    });
+
+    return records;
+  }
+
+  private mergeChainLists(
+    existing: SupportedChain[],
+    incoming: SupportedChain[],
+  ): SupportedChain[] {
+    const result = [...existing];
+    incoming.forEach((chain) => {
+      if (!result.includes(chain)) {
+        result.push(chain);
+      }
+    });
+    return result;
   }
 
   private extractLinkedProviders(

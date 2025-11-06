@@ -36,6 +36,7 @@ export const PROFILE_ACK_STORAGE_KEY = "monolith:bridge:profileAcknowledged";
 export type ProfileSettingsPatch = {
   socialLogins?: SocialProvider[];
   preferences?: ProfilePreferences;
+  linkedWallets?: LinkedWallet[];
 };
 
 const isBrowser = () => typeof window !== "undefined";
@@ -313,6 +314,9 @@ export async function updateProfilePlan(
   }
 
   writeProfile(stored);
+  if (stored.linkedWallets.length > 0) {
+    queueAutoConnectWallets(stored.linkedWallets);
+  }
   markProfileAcknowledged();
   return stored;
 }

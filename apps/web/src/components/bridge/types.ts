@@ -53,7 +53,7 @@ export interface WalletConnection {
 }
 
 export interface BridgeActions {
-  connectProvider: (provider: WalletProvider) => Promise<void>;
+  connectProvider: (provider: WalletProvider) => Promise<WalletConnection | null>;
   disconnectAll: () => Promise<void>;
   removeProvider: (provider: WalletProvider) => Promise<void>;
   refreshBalances: () => Promise<void>;

@@ -12,7 +12,7 @@ import {
 import { LocalAccountSigner } from '@alchemy/aa-core';
 import type { Account, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
-import type { Hex } from 'viem';
+import { isHex, type Hex } from 'viem';
 import { arbitrumSepolia, sepolia } from 'viem/chains';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -99,7 +99,7 @@ export class AaService {
 
     const fallbackAccount = await this.createSmartAccountClient(chainKey);
     const fallbackSmartAccountAddress =
-      await fallbackAccount.client.getAddress();
+      (await fallbackAccount.client.getAddress()) as Hex;
 
     let sessionId = this.generateSessionId(payload.loginType, payload.email);
     let ownerAddress = fallbackAccount.ownerAddress;
@@ -117,17 +117,19 @@ export class AaService {
       if (external.sessionId) {
         sessionId = external.sessionId;
       }
-      if (external.ownerAddress) {
-        ownerAddress = external.ownerAddress;
-        ownerPrivateKey = '0x';
-      } else if (external.owner?.address) {
-        ownerAddress = external.owner.address;
-        ownerPrivateKey = '0x';
+      const externalOwner =
+        coerceHexString(external.ownerAddress) ??
+        coerceHexString(external.owner?.address);
+      if (externalOwner) {
+        ownerAddress = externalOwner;
+        ownerPrivateKey = '0x' as Hex;
       }
-      if (external.smartAccountAddress) {
-        smartAccountAddress = external.smartAccountAddress;
-      } else if (external.smartAccount?.address) {
-        smartAccountAddress = external.smartAccount.address;
+
+      const externalSmartAccount =
+        coerceHexString(external.smartAccountAddress) ??
+        coerceHexString(external.smartAccount?.address);
+      if (externalSmartAccount) {
+        smartAccountAddress = externalSmartAccount;
       }
       if (external.status) {
         sessionStatus = external.status;
@@ -296,6 +298,8 @@ export class AaService {
       where: { sessionId },
       select: {
         sponsorshipTerms: true,
+        linkedWallets: true,
+        smartAccountAddress: true,
       },
     });
 
@@ -327,12 +331,34 @@ export class AaService {
       mergedPreferences,
     );
 
+    let linkedWalletsJson: Prisma.JsonArray | undefined;
+    if (payload.linkedWallets !== undefined) {
+      const sanitised = normaliseLinkedWalletInput(payload.linkedWallets);
+      linkedWalletsJson = encodeLinkedWallets(sanitised);
+    }
+
     await this.prisma.session.update({
       where: { sessionId },
       data: {
         sponsorshipTerms: encoded ?? null,
+        ...(linkedWalletsJson !== undefined
+          ? { linkedWallets: linkedWalletsJson }
+          : {}),
       },
     });
+
+    if (linkedWalletsJson !== undefined) {
+      try {
+        await this.prisma.account.update({
+          where: { smartAccountAddress: session.smartAccountAddress },
+          data: { linkedWallets: linkedWalletsJson },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to persist linked wallets for account ${session.smartAccountAddress}: ${(error as Error).message}`,
+        );
+      }
+    }
 
     return this.getProfile(sessionId);
   }
@@ -436,7 +462,13 @@ export class AaService {
     };
   }
 
-  private async createSmartAccountClient(chainKey: 'ethereum' | 'arbitrum') {
+  private async createSmartAccountClient(
+    chainKey: 'ethereum' | 'arbitrum',
+  ): Promise<{
+    client: Awaited<ReturnType<typeof createModularAccountAlchemyClient>>;
+    ownerPrivateKey: Hex;
+    ownerAddress: Hex;
+  }> {
     const apiKey = this.config.getOrThrow<string>('ALCHEMY_APP_ID');
     const policyId = this.config.get<string>('PAYMASTER_POLICY_ID');
     const rpcUrl =
@@ -446,7 +478,7 @@ export class AaService {
 
     const ownerPrivateKey = `0x${randomBytes(32).toString('hex')}` as Hex;
     const owner = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
-    const ownerAddress = await owner.getAddress();
+    const ownerAddress = (await owner.getAddress()) as Hex;
 
     const baseChain = chainKey === 'arbitrum' ? arbitrumSepolia : sepolia;
     const chain = defineAlchemyChain({
@@ -626,6 +658,33 @@ function normalisePreferences(
   }
 
   return Object.fromEntries(resultEntries) as Record<string, boolean>;
+}
+
+function normaliseLinkedWalletInput(
+  wallets: LinkedWalletDto[],
+): LinkedWalletDto[] {
+  if (!wallets || wallets.length === 0) {
+    return [];
+  }
+  const seen = new Map<string, LinkedWalletDto>();
+  wallets.forEach((wallet) => {
+    const key = `${wallet.provider}:${wallet.address.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.set(key, {
+        provider: wallet.provider,
+        address: wallet.address,
+        chains: Array.from(new Set(wallet.chains ?? [])),
+      });
+    }
+  });
+  return Array.from(seen.values());
+}
+
+function coerceHexString(value?: string | null): Hex | undefined {
+  if (!value || typeof value !== 'string') {
+    return undefined;
+  }
+  return isHex(value, { strict: false }) ? (value as Hex) : undefined;
 }
 
 function mapLinkedWallets(
