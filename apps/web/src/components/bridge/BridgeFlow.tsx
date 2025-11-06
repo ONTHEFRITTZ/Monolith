@@ -413,24 +413,45 @@ export function BridgeFlow() {
                 {connectedCount} wallet{connectedCount > 1 ? "s" : ""} connected
               </span>
               <div className={styles.connectedActions}>
-                {profile ? (
-                  <button
-                    type="button"
-                    className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
-                    onClick={() => setProfileSettingsOpen(true)}
-                    disabled={state.isLoading}
-                  >
-                    Profile
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
-                  onClick={() => void actions.disconnectAll()}
-                  disabled={state.isLoading}
-                >
-                  Disconnect
-                </button>
+                {guestMode ? (
+                  <>
+                    <button
+                      type="button"
+                      className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
+                      onClick={() => router.push("/onboarding")}
+                      disabled={state.isLoading}
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
+                      onClick={() => void actions.disconnectAll()}
+                      disabled={state.isLoading}
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
+                      onClick={() => setProfileSettingsOpen(true)}
+                      disabled={state.isLoading}
+                    >
+                      Profile
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
+                      onClick={() => void actions.disconnectAll()}
+                      disabled={state.isLoading}
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <ul className={styles.connectedWalletList}>
