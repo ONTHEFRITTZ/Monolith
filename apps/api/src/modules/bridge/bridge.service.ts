@@ -425,31 +425,32 @@ export class BridgeService {
           (balance.amount * quote.sourceUsdPrice).toFixed(2),
         );
 
-        const intent: BalanceIntent = {
-          id: this.composeIntentId(provider, idBase),
-          sourceChain: balance.chain,
-          sourceToken: balance.token,
-          destinationChain: 'monad',
-          destinationToken,
-          availableAmount: Number(balance.amount.toFixed(6)),
-          availableFormatted: this.formatAmount(balance.amount, balance.token),
-          usdValue,
-          feeBps: quote.feeBps,
-          etaMinutes: this.estimateEtaMinutes(balance.chain),
-          provider,
-        };
-
-        intents.push(intent);
-        this.dynamicIntents.set(intent.id, {
+        const dynamicBase: BaseIntentConfig = {
           id: idBase,
           sourceChain: balance.chain,
           sourceToken: balance.token,
           destinationChain: 'monad',
           destinationToken,
-          availableAmount: balance.amount,
+          availableAmount: Number(balance.amount.toFixed(6)),
           usdValue,
           feeBps: quote.feeBps,
           etaMinutes: this.estimateEtaMinutes(balance.chain),
+        };
+
+        const intentBase = this.buildBalanceIntent(provider, dynamicBase, {
+          usdValue,
+          feeBps: quote.feeBps,
+        });
+
+        const intent: BalanceIntent = {
+          ...intentBase,
+          availableFormatted: this.formatAmount(balance.amount, balance.token),
+        };
+
+        intents.push(intent);
+        this.dynamicIntents.set(intent.id, {
+          ...dynamicBase,
+          availableAmount: balance.amount,
         });
       } catch (error) {
         this.logger.warn(
@@ -490,9 +491,33 @@ export class BridgeService {
 
     if (intents.length === 0) {
       const baseIntents = PROVIDER_INTENT_CATALOG[provider];
-      intents = baseIntents.map((intent) =>
-        this.buildBalanceIntent(provider, intent),
+      const enriched = await Promise.all(
+        baseIntents.map(async (intent) => {
+          try {
+            const quote = await this.quoteService.quote(
+              intent.sourceChain,
+              intent.sourceToken,
+              intent.destinationChain,
+              intent.destinationToken,
+              intent.availableAmount,
+              intent.feeBps,
+            );
+            const usdValue = intent.availableAmount * quote.sourceUsdPrice;
+            return this.buildBalanceIntent(provider, intent, {
+              usdValue,
+              feeBps: quote.feeBps,
+            });
+          } catch (error) {
+            this.logger.warn(
+              `Falling back to cached USD value for ${intent.sourceToken} on ${intent.sourceChain}: ${
+                (error as Error).message
+              }`,
+            );
+            return this.buildBalanceIntent(provider, intent);
+          }
+        }),
       );
+      intents = enriched;
     }
 
     return {
@@ -727,7 +752,14 @@ export class BridgeService {
   private buildBalanceIntent(
     provider: WalletProvider,
     base: BaseIntentConfig,
+    options?: { usdValue?: number; feeBps?: number },
   ): BalanceIntent {
+    const usdValue =
+      typeof options?.usdValue === 'number'
+        ? Number(options.usdValue.toFixed(2))
+        : base.usdValue;
+    const feeBps = options?.feeBps ?? base.feeBps;
+
     return {
       id: this.composeIntentId(provider, base.id),
       sourceChain: base.sourceChain,
@@ -739,8 +771,8 @@ export class BridgeService {
         base.availableAmount,
         base.sourceToken,
       ),
-      usdValue: base.usdValue,
-      feeBps: base.feeBps,
+      usdValue,
+      feeBps,
       etaMinutes: base.etaMinutes,
       provider,
     };

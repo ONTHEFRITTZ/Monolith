@@ -13,7 +13,7 @@ This checklist consolidates the remaining implementation items we have discussed
 
 ## 2. Bridge Engine & Pricing
 
-- [ ] Swap the static quote registry for live pricing: pull MON/USDC from Hyperliquid pre-market feed and USDC FX data from Alchemy (or fallback oracle).
+- [x] Swap the static quote registry for live pricing: pull MON/USDC from Hyperliquid pre-market feed and USDC FX data from Alchemy (or fallback oracle).
 - [ ] Enable USDC (Solana) → MON intents and broaden token/chain enums accordingly.
 - [ ] Remove the front-end mock bridge client once the Nest routes are complete; update `useBridgeState` to rely on `/api/bridge` exclusively.
 - [ ] Implement submit/preview flows that talk to the bridge worker (or temporary stub) so “Preview bridge” exercises real routing logic without mainnet settlement.
