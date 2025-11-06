@@ -1,17 +1,29 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./BridgeFlow.module.css";
 import { useBridgeState } from "./useBridgeState";
-import type { StoredProfile } from "../onboarding/types";
 import { BalanceIntentList } from "./BalanceIntentList";
 import { AmountSheet } from "./AmountSheet";
 import { BridgeStatusBar } from "./BridgeStatusBar";
-import type { BalanceIntent, WalletProvider } from "./types";
+import type { BalanceIntent, WalletProvider, WalletConnection } from "./types";
 import { providerLabel } from "./bridgeClient";
 import { PlansPricingModal } from "./PlansPricingModal";
 import { ProfilePromptModal } from "./ProfilePromptModal";
+import { ProfileSettingsModal } from "./ProfileSettingsModal";
+import type { LinkedWallet } from "../onboarding/types";
+import type { StoredProfile } from "@/lib/profile";
+import {
+  readProfile,
+  consumeAutoConnectProviders,
+  providersFromProfile,
+  markProfileAcknowledged,
+  isProfileAcknowledged,
+  writeProfile,
+  clearProfileStorage,
+} from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
@@ -19,57 +31,96 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   phantom: "/logos/phantom.png",
   backpack: "/logos/backpack.png",
 };
-const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
-const PROFILE_ACK_STORAGE_KEY = "monolith:bridge:profileAcknowledged";
-
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
+  const router = useRouter();
+  const initialProfile = readProfile();
+  const [profile, setProfile] = useState<StoredProfile | null>(initialProfile);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
   const [pricingOpen, setPricingOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [guestMode, setGuestMode] = useState(false);
+  const [guestMode, setGuestMode] = useState(!initialProfile);
   const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
   const [autoConnectProviders, setAutoConnectProviders] = useState<WalletProvider[] | null>(null);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
   const [profilePromptInitialized, setProfilePromptInitialized] = useState(false);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
+
+  const handleGuestContinue = useCallback(() => {
+    clearProfileStorage();
+    markProfileAcknowledged();
+    setGuestMode(true);
+    setProfile(null);
+    setProfileOpen(false);
+  }, []);
+
+  const handleProfileMutation = useCallback(
+    (mutator: (current: StoredProfile) => StoredProfile) => {
+      setGuestMode(false);
+      setProfile((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const next = mutator(prev);
+        writeProfile(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleLinkWalletFromSettings = useCallback(
+    async (provider: WalletProvider) => {
+      await actions.connectProvider(provider);
+    },
+    [actions]
+  );
+
+  const handleRemoveWalletFromSettings = useCallback(
+    async (provider: WalletProvider) => {
+      await actions.removeProvider(provider);
+    },
+    [actions]
+  );
+
+  const handleSignOut = useCallback(async () => {
+    await actions.disconnectAll();
+    clearProfileStorage();
+    setProfile(null);
+    setGuestMode(true);
+    setProfileSettingsOpen(false);
+    setProfilePromptInitialized(false);
+    setProfileOpen(true);
+  }, [actions]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (profilePromptInitialized) {
+      const queued = consumeAutoConnectProviders();
+      if (queued.length > 0) {
+        setAutoConnectProviders((prev) => mergeProviderLists(prev, queued));
+      }
       return;
     }
 
-    const profileRaw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (profileRaw) {
-      try {
-        const profile = JSON.parse(profileRaw) as StoredProfile;
-        const providers = providersFromProfile(profile);
-        if (providers.length > 0) {
-          setAutoConnectProviders((prev) => mergeProviderLists(prev, providers));
-        }
-        setGuestMode(false);
-        setProfileOpen(false);
-        setProfilePromptInitialized(true);
-      } catch (error) {
-        console.error("Failed to parse stored profile", error);
+    const storedProfile = readProfile();
+    if (storedProfile) {
+      setProfile(storedProfile);
+      setGuestMode(false);
+      setProfileOpen(false);
+      markProfileAcknowledged();
+      const providers = providersFromProfile(storedProfile);
+      if (providers.length > 0) {
+        setAutoConnectProviders((prev) => mergeProviderLists(prev, providers));
       }
-    } else if (!profilePromptInitialized) {
-      const hasProfile = window.localStorage.getItem(PROFILE_ACK_STORAGE_KEY) === "true";
-      setProfileOpen(!hasProfile);
-      setProfilePromptInitialized(true);
+    } else {
+      setProfileOpen(!isProfileAcknowledged());
     }
 
-    const raw = window.localStorage.getItem(AUTO_CONNECT_STORAGE_KEY);
-    if (raw) {
-      window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
-      try {
-        const parsed = JSON.parse(raw) as WalletProvider[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setAutoConnectProviders((prev) => mergeProviderLists(prev, parsed));
-        }
-      } catch (error) {
-        console.error("Failed to parse auto-connect providers", error);
-      }
+    setProfilePromptInitialized(true);
+    const queued = consumeAutoConnectProviders();
+    if (queued.length > 0) {
+      setAutoConnectProviders((prev) => mergeProviderLists(prev, queued));
     }
   }, [profilePromptInitialized]);
 
@@ -105,6 +156,27 @@ export function BridgeFlow() {
       cancelled = true;
     };
   }, [actions, autoConnectAttempted, autoConnectProviders, state.connectedWallets]);
+
+  useEffect(() => {
+    if (!profile) {
+      return;
+    }
+    const linkedFromState = mapConnectionsToLinkedWallets(state.connectedWallets);
+    if (!areLinkedWalletsEqual(profile.linkedWallets, linkedFromState)) {
+      const nextProfile: StoredProfile = {
+        ...profile,
+        linkedWallets: linkedFromState,
+      };
+      setProfile(nextProfile);
+      writeProfile(nextProfile);
+    }
+  }, [profile, state.connectedWallets]);
+
+  useEffect(() => {
+    if (profile) {
+      setGuestMode(false);
+    }
+  }, [profile]);
 
   const handleSelect = (intent: BalanceIntent) => {
     actions.selectIntent(intent);
@@ -231,6 +303,24 @@ export function BridgeFlow() {
           Plans &amp; pricing
         </button>
 
+        {guestMode ? (
+          <button
+            type="button"
+            className={styles.signInButton}
+            onClick={() => router.push("/onboarding")}
+          >
+            Sign in
+          </button>
+        ) : profile ? (
+          <button
+            type="button"
+            className={styles.profileButton}
+            onClick={() => setProfileSettingsOpen(true)}
+          >
+            {profile.sponsorshipPlan === "pro" ? "Pro profile" : "Profile"}
+          </button>
+        ) : null}
+
         {state.isConnected && connectedWallet ? (
           <div className={styles.connectedPillFixed}>
             <div className={styles.connectedPillMeta}>
@@ -345,10 +435,24 @@ export function BridgeFlow() {
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}
-        onContinueGuest={() => {
-          window.localStorage.setItem(PROFILE_ACK_STORAGE_KEY, "true");
-          setGuestMode(true);
+        onContinueGuest={handleGuestContinue}
+      />
+
+      <ProfileSettingsModal
+        open={profileSettingsOpen}
+        profile={profile}
+        onClose={() => setProfileSettingsOpen(false)}
+        onLinkWallet={handleLinkWalletFromSettings}
+        onRemoveWallet={handleRemoveWalletFromSettings}
+        onMutateProfile={handleProfileMutation}
+        onSignOut={handleSignOut}
+        onUpgradePlan={() => {
+          setProfileSettingsOpen(false);
+          setPricingOpen(true);
         }}
+        availableProviders={WALLET_OPTIONS}
+        walletLogos={WALLET_LOGOS}
+        isBusy={state.isLoading}
       />
     </div>
   );
@@ -359,19 +463,6 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function providersFromProfile(profile: StoredProfile): WalletProvider[] {
-  if (!profile?.linkedWallets) {
-    return [];
-  }
-  const providers = new Set<WalletProvider>();
-  profile.linkedWallets.forEach((wallet) => {
-    if (WALLET_OPTIONS.includes(wallet.provider)) {
-      providers.add(wallet.provider);
-    }
-  });
-  return Array.from(providers);
-}
-
 function mergeProviderLists(
   current: WalletProvider[] | null,
   incoming: WalletProvider[]
@@ -379,4 +470,28 @@ function mergeProviderLists(
   const set = new Set<WalletProvider>(current ?? []);
   incoming.forEach((provider) => set.add(provider));
   return Array.from(set);
+}
+
+function mapConnectionsToLinkedWallets(connections: WalletConnection[]): LinkedWallet[] {
+  return connections.map((wallet) => ({
+    provider: wallet.provider,
+    address: wallet.address,
+    chains: wallet.chains,
+  }));
+}
+
+function areLinkedWalletsEqual(a: LinkedWallet[], b: LinkedWallet[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const normalize = (list: LinkedWallet[]) =>
+    [...list].sort((x, y) => x.provider.localeCompare(y.provider));
+  const sortedA = normalize(a);
+  const sortedB = normalize(b);
+  return sortedA.every((item, index) => {
+    const other = sortedB[index];
+    return (
+      item.provider === other.provider && item.address.toLowerCase() === other.address.toLowerCase()
+    );
+  });
 }

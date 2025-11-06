@@ -40,12 +40,15 @@ export const metamaskConnector: WalletConnector = {
     if (!ethereum) {
       throw new Error("MetaMask provider not found. Install MetaMask extension.");
     }
-    const accounts: string[] = await ethereum.request({ method: "eth_requestAccounts" });
-    if (!accounts || accounts.length === 0) {
+    const rawAccounts = (await ethereum.request({
+      method: "eth_requestAccounts",
+    })) as string[] | undefined;
+    const accounts = Array.isArray(rawAccounts) ? rawAccounts : [];
+    if (accounts.length === 0) {
       throw new Error("No MetaMask accounts returned.");
     }
 
-    const chainId: string = await ethereum.request({ method: "eth_chainId" });
+    const chainId = (await ethereum.request({ method: "eth_chainId" })) as string | undefined;
     const chains = mapEvmChain(chainId);
 
     return {
@@ -122,7 +125,10 @@ export function getConnector(provider: WalletProvider): WalletConnector {
   }
 }
 
-function mapEvmChain(chainId: string): SupportedChain[] {
+function mapEvmChain(chainId?: string): SupportedChain[] {
+  if (!chainId) {
+    return ["ethereum"];
+  }
   switch (chainId.toLowerCase()) {
     case "0x1":
       return ["ethereum"];

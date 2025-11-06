@@ -21,9 +21,9 @@ export function ProfilePromptModal({ open, onDismiss, onContinueGuest }: Profile
           <div>
             <h2 className={styles.modalTitle}>Create your bridge profile</h2>
             <p className={styles.modalSubtitle}>
-              Signing in unlocks gas sponsorship tracking, usage analytics, and priority recovery
-              when intents stall. Prefer to stay anonymous? Continue as a guest and we’ll simply
-              apply the standard routing fee.
+              Signing in unlocks sponsorship tracking, usage analytics, and priority recovery when
+              intents stall. Prefer to stay anonymous? Continue as a guest and we will simply apply
+              the standard routing fee.
             </p>
           </div>
           <button type="button" className={styles.closeButton} onClick={onDismiss}>

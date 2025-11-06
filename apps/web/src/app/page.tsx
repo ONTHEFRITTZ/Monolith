@@ -7,6 +7,8 @@ import styles from "./page.module.css";
 import { getConnector } from "@/lib/wallets/connectors";
 import type { WalletProvider } from "@/components/bridge/types";
 import { providerLabel } from "@/components/bridge/bridgeClient";
+import { ProfilePromptModal } from "@/components/bridge/ProfilePromptModal";
+import { markProfileAcknowledged, readProfile } from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
@@ -14,22 +16,32 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   phantom: "/logos/phantom.png",
   backpack: "/logos/backpack.png",
 };
-const PROFILE_STORAGE_KEY = "monolith:profile";
 
 export default function Home() {
   const router = useRouter();
   const [connecting, setConnecting] = useState<WalletProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileExists] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return Boolean(readProfile());
+  });
+  const [promptDismissed, setPromptDismissed] = useState(() => profileExists);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const profileRaw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (profileRaw) {
+    if (profileExists) {
       router.replace("/bridge");
     }
-  }, [router]);
+  }, [profileExists, router]);
+
+  const promptOpen = !profileExists && !promptDismissed;
+
+  const handleGuestContinue = () => {
+    markProfileAcknowledged();
+    setPromptDismissed(true);
+    router.push("/bridge");
+  };
 
   const handleConnect = async (provider: WalletProvider) => {
     setError(null);
@@ -47,6 +59,12 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
+      <ProfilePromptModal
+        open={promptOpen}
+        onDismiss={() => setPromptDismissed(true)}
+        onContinueGuest={handleGuestContinue}
+      />
+
       <main className={styles.container}>
         <div>
           <h1 className={styles.title}>Connect your wallet</h1>
@@ -61,7 +79,7 @@ export default function Home() {
               key={provider}
               type="button"
               className={styles.walletButton}
-              onClick={() => handleConnect(provider)}
+              onClick={() => void handleConnect(provider)}
               disabled={connecting !== null}
             >
               <span className={styles.walletImage}>

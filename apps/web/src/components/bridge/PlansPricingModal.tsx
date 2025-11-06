@@ -1,18 +1,29 @@
 import styles from "./BridgeFlow.module.css";
 
-const TIERS = [
+interface TierDefinition {
+  id: "starter" | "pro" | "self";
+  name: string;
+  price: string;
+  sponsorship: string;
+  api: string;
+  badge?: string;
+  services: readonly string[];
+  ideal: string;
+}
+
+const TIERS: readonly TierDefinition[] = [
   {
     id: "starter",
     name: "Starter (Sponsored)",
     price: "$0 / mo",
-    sponsorship: "$50 gas sponsorship (≈ retail flow)",
+    sponsorship: "$50 gas sponsorship (covers most retail flow)",
     api: "No API access",
     badge: "Recommended",
     services: [
       "Alchemy smart account onboarding",
       "Monolith paymaster coverage up to cap",
-      "Standard bridge routing (6–12 bps)",
-      "Email support & incident recovery",
+      "Standard bridge routing (6-12 bps)",
+      "Email support and incident recovery",
     ],
     ideal: "New wallets, retail users, pilots",
   },
@@ -20,13 +31,14 @@ const TIERS = [
     id: "pro",
     name: "Pro (Sponsored)",
     price: "$149 / mo",
-    sponsorship: "$250 gas sponsorship + top-up packs",
-    api: "Yes — authenticated bridge API & webhooks",
+    sponsorship: "$250 gas sponsorship plus on-demand top-ups",
+    api: "Yes - authenticated bridge API and webhooks",
+    badge: undefined,
     services: [
-      "Priority routing & dedicated RPC slice",
+      "Priority routing and dedicated RPC slice",
       "99.5% SLA with concierge support",
-      "Analytics dashboard & usage alerts",
-      "Programmable team wallets & recovery desk",
+      "Analytics dashboard and usage alerts",
+      "Programmable team wallets and recovery desk",
     ],
     ideal: "Merchants, aggregators, trading desks",
   },
@@ -36,14 +48,15 @@ const TIERS = [
     price: "$39 platform fee + gas",
     sponsorship: "Bring-your-own paymaster",
     api: "Optional add-on ($49) as needs grow",
+    badge: undefined,
     services: [
-      "Health monitoring & stuck-intent rescue",
+      "Health monitoring and stuck-intent rescue",
       "Access to routing marketplace",
-      "Compliance-ready logging & exports",
+      "Compliance-ready logging and exports",
     ],
     ideal: "Teams with existing paymaster infra",
   },
-];
+] as const;
 
 interface PlansPricingModalProps {
   open: boolean;
@@ -63,7 +76,7 @@ export function PlansPricingModal({ open, onClose }: PlansPricingModalProps) {
             <h2 className={styles.modalTitle}>Plans &amp; pricing</h2>
             <p className={styles.modalSubtitle}>
               Sponsorship tiers align with how deeply you need Monolith to cover gas, routing, and
-              automation. Start free, graduate to Pro when you’re ready for higher throughput.
+              automation. Start free, graduate to Pro when you are ready for higher throughput.
             </p>
           </div>
           <button type="button" className={styles.closeButton} onClick={onClose}>

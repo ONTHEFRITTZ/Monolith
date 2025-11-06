@@ -73,12 +73,3 @@ export interface OnboardingActions {
   setError: (message?: string) => void;
   complete: (payload: { accountAddress: string; paymasterPolicyId: string }) => void;
 }
-
-export interface StoredProfile {
-  sessionId: string;
-  smartAccountAddress: string;
-  ownerAddress?: string;
-  loginType: LoginType;
-  paymasterPolicyId?: string;
-  linkedWallets: LinkedWallet[];
-}
