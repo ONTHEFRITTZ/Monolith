@@ -1,8 +1,20 @@
-﻿export type SupportedChain = 'ethereum' | 'arbitrum' | 'solana' | 'monad';
+export const SupportedChainValues = [
+  'ethereum',
+  'arbitrum',
+  'solana',
+  'monad',
+] as const;
+export type SupportedChain = (typeof SupportedChainValues)[number];
 
-export type SupportedToken = 'usdc' | 'usdt' | 'mon';
+export const SupportedTokenValues = ['usdc', 'usdt', 'mon'] as const;
+export type SupportedToken = (typeof SupportedTokenValues)[number];
 
-export type WalletProvider = 'metamask' | 'phantom' | 'backpack';
+export const WalletProviderValues = [
+  'metamask',
+  'phantom',
+  'backpack',
+] as const;
+export type WalletProvider = (typeof WalletProviderValues)[number];
 
 export type BridgeIntentStatus =
   | 'created'
@@ -11,6 +23,12 @@ export type BridgeIntentStatus =
   | 'settled'
   | 'failed';
 
+export const BridgeSubmissionStatusValues = [
+  'awaiting_source',
+  'pending_settlement',
+  'settled',
+  'failed',
+] as const;
 export type BridgeSubmissionStatus =
   | 'awaiting_source'
   | 'pending_settlement'

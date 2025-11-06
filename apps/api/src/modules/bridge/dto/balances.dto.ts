@@ -1,7 +1,7 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -13,9 +13,13 @@ import {
 import {
   BalanceIntent,
   BridgeSubmissionStatus,
+  BridgeSubmissionStatusValues,
   SupportedChain,
+  SupportedChainValues,
   SupportedToken,
+  SupportedTokenValues,
   WalletProvider,
+  WalletProviderValues,
 } from '../types/bridge.types';
 
 export class ProviderBalancesRequestDto {
@@ -25,7 +29,7 @@ export class ProviderBalancesRequestDto {
 
   @IsOptional()
   @IsArray()
-  @IsEnum(SupportedChain, { each: true })
+  @IsIn(SupportedChainValues, { each: true })
   chainConnections?: SupportedChain[];
 }
 
@@ -33,16 +37,16 @@ export class BalanceIntentDto implements BalanceIntent {
   @IsString()
   id!: string;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   sourceChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   sourceToken!: SupportedToken;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   destinationChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   destinationToken!: SupportedToken;
 
   @IsNumber()
@@ -64,19 +68,19 @@ export class BalanceIntentDto implements BalanceIntent {
   @Min(0)
   etaMinutes!: number;
 
-  @IsEnum(WalletProvider)
+  @IsIn(WalletProviderValues)
   provider!: WalletProvider;
 }
 
 export class ProviderBalancesResponseDto {
-  @IsEnum(WalletProvider)
+  @IsIn(WalletProviderValues)
   provider!: WalletProvider;
 
   @IsString()
   address!: string;
 
   @IsArray()
-  @IsEnum(SupportedChain, { each: true })
+  @IsIn(SupportedChainValues, { each: true })
   chainConnections!: SupportedChain[];
 
   @IsArray()
@@ -111,7 +115,7 @@ export class QuoteResponseDto {
   @Min(0)
   feeAmount!: number;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   feeCurrency!: SupportedToken;
 
   @IsNumber()
@@ -139,21 +143,21 @@ export class SubmitBridgeResponseDto {
   @IsString()
   txHash!: string;
 
-  @IsEnum(WalletProvider)
+  @IsIn(WalletProviderValues)
   provider!: WalletProvider;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   sourceChain!: SupportedChain;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   destinationChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   sourceToken!: SupportedToken;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   destinationToken!: SupportedToken;
 
-  @IsEnum(BridgeSubmissionStatus)
+  @IsIn(BridgeSubmissionStatusValues)
   status!: BridgeSubmissionStatus;
 }

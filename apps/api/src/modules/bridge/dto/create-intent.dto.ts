@@ -1,5 +1,5 @@
 import {
-  IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -9,21 +9,24 @@ import {
 } from 'class-validator';
 import {
   SupportedChain,
+  SupportedChainValues,
   SupportedToken,
+  SupportedTokenValues,
   WalletProvider,
+  WalletProviderValues,
 } from '../types/bridge.types';
 
 export class CreateIntentDto {
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   sourceChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   sourceToken!: SupportedToken;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   destinationChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   destinationToken!: SupportedToken;
 
   @IsNumber()
@@ -31,7 +34,7 @@ export class CreateIntentDto {
   amount!: number;
 
   @IsOptional()
-  @IsEnum(WalletProvider)
+  @IsIn(WalletProviderValues)
   walletProvider?: WalletProvider;
 }
 
@@ -39,16 +42,16 @@ export class IntentResponseDto {
   @IsUUID()
   id!: string;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   sourceChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   sourceToken!: SupportedToken;
 
-  @IsEnum(SupportedChain)
+  @IsIn(SupportedChainValues)
   destinationChain!: SupportedChain;
 
-  @IsEnum(SupportedToken)
+  @IsIn(SupportedTokenValues)
   destinationToken!: SupportedToken;
 
   @IsNumber()
@@ -80,6 +83,6 @@ export class IntentResponseDto {
     | 'failed';
 
   @IsOptional()
-  @IsEnum(WalletProvider)
+  @IsIn(WalletProviderValues)
   walletProvider?: WalletProvider;
 }

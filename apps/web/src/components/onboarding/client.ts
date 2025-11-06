@@ -16,14 +16,22 @@ async function safeReadError(response: Response): Promise<string | undefined> {
 }
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_ROOT}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_ROOT}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...init.headers,
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach Mon-olith API at ${API_ROOT}${path}. Verify the backend dev server is running and NEXT_PUBLIC_API_BASE_URL is set.`,
+      { cause: error as Error }
+    );
+  }
 
   if (!response.ok) {
     const message = await safeReadError(response);

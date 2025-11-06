@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { BridgeService } from './bridge.service';
 import { CreateIntentDto, IntentResponseDto } from './dto/create-intent.dto';
 import {
@@ -46,7 +46,7 @@ export class BridgeController {
   }
 
   @Get('intents/:id/status')
-  getIntentStatus(@Param('id') id: string): IntentResponseDto {
+  async getIntentStatus(@Param('id') id: string): Promise<IntentResponseDto> {
     return this.bridgeService.getIntentStatus(id);
   }
 }

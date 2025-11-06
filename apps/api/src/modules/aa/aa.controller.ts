@@ -27,7 +27,9 @@ export class AaController {
   }
 
   @Post('recovery')
-  saveRecovery(@Body() body: SaveRecoveryRequestDto): SaveRecoveryResponseDto {
+  async saveRecovery(
+    @Body() body: SaveRecoveryRequestDto,
+  ): Promise<SaveRecoveryResponseDto> {
     return this.aaService.saveRecovery(body);
   }
 
@@ -39,12 +41,14 @@ export class AaController {
   }
 
   @Post('onboard')
-  onboard(@Body() body: OnboardRequestDto): OnboardResponseDto {
+  async onboard(@Body() body: OnboardRequestDto): Promise<OnboardResponseDto> {
     return this.aaService.onboard(body);
   }
 
   @Get('status/:sessionId')
-  getStatus(@Param('sessionId') sessionId: string): StatusResponseDto {
+  async getStatus(
+    @Param('sessionId') sessionId: string,
+  ): Promise<StatusResponseDto> {
     return this.aaService.getStatus(sessionId);
   }
 }

@@ -23,6 +23,7 @@ import {
   SupportedChain,
   SupportedToken,
   WalletProvider,
+  WalletProviderValues,
 } from './types/bridge.types';
 
 interface BaseIntentConfig {
@@ -37,8 +38,6 @@ interface BaseIntentConfig {
   etaMinutes: number;
 }
 
-const WALLET_PROVIDER_VALUES = ['metamask', 'phantom', 'backpack'] as const;
-
 interface DiscoveredBalance {
   chain: SupportedChain;
   token: SupportedToken;
@@ -47,6 +46,7 @@ interface DiscoveredBalance {
 
 const PROVIDER_INTENT_CATALOG: Record<
   WalletProvider,
+  WalletProviderValues,
   readonly BaseIntentConfig[]
 > = {
   metamask: [
@@ -134,7 +134,11 @@ const PROVIDER_INTENT_CATALOG: Record<
   ],
 };
 
-const PROVIDER_CHAINS: Record<WalletProvider, SupportedChain[]> = {
+const PROVIDER_CHAINS: Record<
+  WalletProvider,
+  WalletProviderValues,
+  SupportedChain[]
+> = {
   metamask: ['ethereum', 'arbitrum'],
   phantom: ['solana'],
   backpack: ['solana'],
@@ -149,7 +153,7 @@ const TOKEN_DECIMALS: Record<SupportedToken, number> = {
 const QUOTE_EXPIRY_MS = 60_000;
 
 function isWalletProvider(value: string): value is WalletProvider {
-  return (WALLET_PROVIDER_VALUES as readonly string[]).includes(value);
+  return (WalletProviderValues as readonly string[]).includes(value);
 }
 
 @Injectable()
@@ -181,7 +185,8 @@ export class BridgeService {
         amount: payload.amount,
       },
       quote,
-      walletProvider: payload.walletProvider,
+      walletProvider: payload.WalletProvider,
+      WalletProviderValues,
       status: 'created',
     });
 
@@ -393,6 +398,7 @@ export class BridgeService {
 
   private async buildDynamicIntentsForChain(
     provider: WalletProvider,
+    WalletProviderValues,
     chain: SupportedChain,
     address: string,
   ): Promise<BalanceIntent[]> {
@@ -506,6 +512,7 @@ export class BridgeService {
 
   private async discoverProviderBalances(
     provider: WalletProvider,
+    WalletProviderValues,
     address: string,
     requestedChains: SupportedChain[],
   ): Promise<{
@@ -674,7 +681,8 @@ export class BridgeService {
         destinationChain: params.payload.destinationChain,
         destinationToken: params.payload.destinationToken,
         amount: new Prisma.Decimal(params.payload.amount),
-        walletProvider: params.walletProvider,
+        walletProvider: params.WalletProvider,
+        WalletProviderValues,
         feeBps: params.quote.feeBps,
         estimatedDestination: new Prisma.Decimal(
           params.quote.estimatedDestinationAmount,
@@ -692,7 +700,8 @@ export class BridgeService {
         destinationChain: params.payload.destinationChain,
         destinationToken: params.payload.destinationToken,
         amount: new Prisma.Decimal(params.payload.amount),
-        walletProvider: params.walletProvider,
+        walletProvider: params.WalletProvider,
+        WalletProviderValues,
         feeBps: params.quote.feeBps,
         estimatedDestination: new Prisma.Decimal(
           params.quote.estimatedDestinationAmount,
@@ -727,6 +736,7 @@ export class BridgeService {
 
   private buildBalanceIntent(
     provider: WalletProvider,
+    WalletProviderValues,
     base: BaseIntentConfig,
   ): BalanceIntent {
     return {
@@ -747,7 +757,11 @@ export class BridgeService {
     };
   }
 
-  private composeIntentId(provider: WalletProvider, baseId: string): string {
+  private composeIntentId(
+    provider: WalletProvider,
+    WalletProviderValues,
+    baseId: string,
+  ): string {
     return `${provider}:${baseId}`;
   }
 

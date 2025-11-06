@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  arbitrumSepolia,
   createModularAccountAlchemyClient,
-  sepolia,
+  defineAlchemyChain,
 } from '@alchemy/aa-alchemy';
-import { generatePrivateKey, LocalAccountSigner } from '@alchemy/aa-core';
+import { LocalAccountSigner } from '@alchemy/aa-core';
 import { Account, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { arbitrumSepolia, sepolia } from 'viem/chains';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   LoginType,
@@ -148,12 +148,19 @@ export class AaService {
     const accountIntent = payload.accountIntent;
     const sponsorship = payload.sponsorship;
 
+    const recoveryContactsJson = payload.accountIntent.recoveryContacts.map(
+      (contact) => ({
+        type: contact.type,
+        value: contact.value,
+      }),
+    ) as unknown as Prisma.JsonArray;
+
     await this.prisma.session.update({
       where: { sessionId: payload.sessionId },
       data: {
         status: 'completed',
         email: accountIntent.email ?? session.email,
-        recoveryContacts: accountIntent.recoveryContacts as Prisma.JsonArray,
+        recoveryContacts: recoveryContactsJson,
         recoveryThreshold: accountIntent.recoveryThreshold,
         passkeyEnrolled: accountIntent.passkeyEnrolled,
         sponsorshipPlan: sponsorship.plan,
@@ -196,11 +203,20 @@ export class AaService {
   private async createSmartAccountClient(chainKey: 'ethereum' | 'arbitrum') {
     const apiKey = this.config.getOrThrow<string>('ALCHEMY_APP_ID');
     const policyId = this.config.get<string>('PAYMASTER_POLICY_ID');
-    const ownerPrivateKey = generatePrivateKey();
+    const rpcUrl =
+      chainKey === 'arbitrum'
+        ? this.config.getOrThrow<string>('ALCHEMY_ARB_RPC_URL')
+        : this.config.getOrThrow<string>('ALCHEMY_ETH_RPC_URL');
+
+    const ownerPrivateKey = `0x${randomBytes(32).toString('hex')}`;
     const owner = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
     const ownerAddress = await owner.getAddress();
 
-    const chain = chainKey === 'arbitrum' ? arbitrumSepolia : sepolia;
+    const baseChain = chainKey === 'arbitrum' ? arbitrumSepolia : sepolia;
+    const chain = defineAlchemyChain({
+      chain: baseChain,
+      rpcBaseUrl: rpcUrl,
+    });
 
     const client = await createModularAccountAlchemyClient({
       apiKey,
