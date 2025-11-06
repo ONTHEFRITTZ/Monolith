@@ -23,6 +23,7 @@ import {
   isProfileAcknowledged,
   writeProfile,
   clearProfileStorage,
+  syncProfileWithServer,
 } from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
@@ -122,6 +123,29 @@ export function BridgeFlow() {
     if (queued.length > 0) {
       setAutoConnectProviders((prev) => mergeProviderLists(prev, queued));
     }
+  }, [profilePromptInitialized]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const synced = await syncProfileWithServer();
+      if (!cancelled && synced) {
+        setProfile(synced);
+        setGuestMode(false);
+        const providers = providersFromProfile(synced);
+        if (providers.length > 0) {
+          setAutoConnectProviders((prev) => mergeProviderLists(prev, providers));
+        }
+      }
+    };
+
+    if (profilePromptInitialized) {
+      void run();
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [profilePromptInitialized]);
 
   useEffect(() => {

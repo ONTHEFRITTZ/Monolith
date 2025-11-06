@@ -137,3 +137,111 @@ export function providersFromProfile(profile: StoredProfile | null): WalletProvi
   }
   return Array.from(new Set(profile.linkedWallets.map((wallet) => wallet.provider)));
 }
+
+function buildApiBase(): string {
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+  return `${base.replace(/\/$/, "")}/api/aa`;
+}
+
+function normaliseLinkedWallets(
+  wallets: Array<{ provider?: string; address?: string; chains?: string[] }> | undefined
+): LinkedWallet[] {
+  if (!wallets || wallets.length === 0) {
+    return [];
+  }
+  const seen = new Map<string, LinkedWallet>();
+  wallets.forEach((wallet) => {
+    const provider = wallet.provider as WalletProvider | undefined;
+    const address = typeof wallet.address === "string" ? wallet.address : undefined;
+    if (!provider || !address) {
+      return;
+    }
+    const chains = Array.isArray(wallet.chains)
+      ? wallet.chains.filter(
+          (chain): chain is LinkedWallet["chains"][number] => typeof chain === "string"
+        )
+      : [];
+    const key = `${provider}:${address.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.set(key, {
+        provider,
+        address,
+        chains,
+      });
+    }
+  });
+  return Array.from(seen.values());
+}
+
+async function requestProfile(path: string): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as Record<string, unknown>;
+  } catch (error) {
+    console.error("Failed to fetch remote profile", error);
+    return null;
+  }
+}
+
+export async function fetchProfileFromServer(sessionId: string): Promise<StoredProfile | null> {
+  const payload = await requestProfile(`${buildApiBase()}/status/${sessionId}`);
+  if (!payload) {
+    return null;
+  }
+
+  const smartAccountAddress =
+    typeof payload.smartAccountAddress === "string" ? payload.smartAccountAddress : undefined;
+  const loginType = payload.loginType as LoginType | undefined;
+  if (!smartAccountAddress || !loginType) {
+    return null;
+  }
+
+  const ownerAddress = typeof payload.ownerAddress === "string" ? payload.ownerAddress : undefined;
+  const paymasterPolicyId =
+    typeof payload.paymasterPolicyId === "string" ? payload.paymasterPolicyId : undefined;
+  const linkedWallets = normaliseLinkedWallets(
+    Array.isArray(payload.linkedWallets)
+      ? (payload.linkedWallets as Array<Record<string, unknown>>)
+      : []
+  );
+
+  const sponsorshipPlan =
+    ((payload.sponsorshipPlan ?? payload.plan) as SponsorshipPlanId | undefined) ?? "starter";
+
+  const socialLogins = Array.isArray(payload.socialLogins)
+    ? (payload.socialLogins as Array<SocialProvider>).filter(
+        (value): value is SocialProvider => value === "google" || value === "apple"
+      )
+    : undefined;
+
+  const profile: StoredProfile = {
+    sessionId,
+    smartAccountAddress,
+    ownerAddress,
+    loginType,
+    paymasterPolicyId,
+    linkedWallets,
+    sponsorshipPlan,
+    socialLogins,
+  };
+
+  writeProfile(profile);
+  if (linkedWallets.length > 0) {
+    queueAutoConnectWallets(linkedWallets);
+  }
+  markProfileAcknowledged();
+
+  return profile;
+}
+
+export async function syncProfileWithServer(): Promise<StoredProfile | null> {
+  const local = readProfile();
+  if (!local?.sessionId) {
+    return null;
+  }
+  const remote = await fetchProfileFromServer(local.sessionId);
+  return remote ?? local;
+}

@@ -8,7 +8,7 @@ import { getConnector } from "@/lib/wallets/connectors";
 import type { WalletProvider } from "@/components/bridge/types";
 import { providerLabel } from "@/components/bridge/bridgeClient";
 import { ProfilePromptModal } from "@/components/bridge/ProfilePromptModal";
-import { markProfileAcknowledged, readProfile } from "@/lib/profile";
+import { markProfileAcknowledged, readProfile, syncProfileWithServer } from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
@@ -21,7 +21,7 @@ export default function Home() {
   const router = useRouter();
   const [connecting, setConnecting] = useState<WalletProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [profileExists] = useState<boolean>(() => {
+  const [profileExists, setProfileExists] = useState<boolean>(() => {
     if (typeof window === "undefined") {
       return false;
     }
@@ -34,6 +34,21 @@ export default function Home() {
       router.replace("/bridge");
     }
   }, [profileExists, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const profile = await syncProfileWithServer();
+      if (!cancelled && profile) {
+        setProfileExists(true);
+        setPromptDismissed(true);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const promptOpen = !profileExists && !promptDismissed;
 

@@ -214,6 +214,10 @@ export class AaService {
       ownerAddress: session.ownerAddress,
       email: session.email ?? undefined,
       linkedWallets: mapLinkedWallets(session.linkedWallets),
+      sponsorshipPlan: session.sponsorshipPlan
+        ? (session.sponsorshipPlan as SponsorshipPlan)
+        : undefined,
+      sponsorshipTermsVersion: session.sponsorshipTerms ?? undefined,
     };
   }
 

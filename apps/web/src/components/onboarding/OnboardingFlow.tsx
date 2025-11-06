@@ -24,6 +24,7 @@ import {
   writeProfile,
   clearProfileStorage,
   markProfileAcknowledged,
+  fetchProfileFromServer,
 } from "@/lib/profile";
 
 const stepMeta = [
@@ -202,7 +203,7 @@ export function OnboardingFlow() {
         setLinkingProvider(null);
       }
     },
-    [actions, state.linkedWallets, state.sessionId]
+    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan]
   );
 
   const handleRemoveWallet = useCallback(
@@ -220,7 +221,7 @@ export function OnboardingFlow() {
         sponsorshipPlan: state.sponsorshipPlan,
       });
     },
-    [actions, state.linkedWallets, state.sessionId]
+    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan]
   );
 
   const handleReviewSubmit = useCallback(async () => {
@@ -264,6 +265,7 @@ export function OnboardingFlow() {
         linkedWallets: state.linkedWallets,
         sponsorshipPlan: state.sponsorshipPlan,
       });
+      void fetchProfileFromServer(state.sessionId);
 
       actions.complete({
         accountAddress: response.accountAddress,
@@ -347,6 +349,7 @@ export function OnboardingFlow() {
               linkedWallets: storedWallets,
               sponsorshipPlan: stored.sponsorshipPlan ?? state.sponsorshipPlan,
             });
+            void fetchProfileFromServer(stored.sessionId);
           }
           actions.complete({
             accountAddress: stored.accountAddress ?? stored.ownerAddress,
@@ -391,6 +394,7 @@ export function OnboardingFlow() {
               linkedWallets: nextWallets,
               sponsorshipPlan: stored.sponsorshipPlan ?? state.sponsorshipPlan,
             });
+            void fetchProfileFromServer(stored.sessionId);
           }
           actions.complete({
             accountAddress:
@@ -407,7 +411,7 @@ export function OnboardingFlow() {
     };
 
     void resume();
-  }, [actions, hasResumed, state.loginType, state.ownerAddress]);
+  }, [actions, hasResumed, state.loginType, state.ownerAddress, state.sponsorshipPlan]);
 
   useEffect(() => {
     if (state.currentStep !== "completed" && redirectScheduled) {
