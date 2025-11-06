@@ -223,7 +223,7 @@ async function requestJson(
     }
     return (await response.json()) as Record<string, unknown>;
   } catch (error) {
-    console.error("Failed to call profile endpoint", error);
+    console.warn("Failed to call profile endpoint", error);
     return null;
   }
 }
@@ -346,6 +346,11 @@ export async function syncProfileWithServer(): Promise<StoredProfile | null> {
   if (!local?.sessionId) {
     return null;
   }
-  const remote = await fetchProfileFromServer(local.sessionId);
-  return remote ?? local;
+  try {
+    const remote = await fetchProfileFromServer(local.sessionId);
+    return remote ?? local;
+  } catch (error) {
+    console.warn("Failed to sync profile with server", error);
+    return local;
+  }
 }

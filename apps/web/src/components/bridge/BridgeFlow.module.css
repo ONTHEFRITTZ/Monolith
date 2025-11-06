@@ -638,8 +638,8 @@
 
 .utilityRail {
   position: fixed;
-  top: 24px;
-  left: 220px;
+  top: 28px;
+  left: 236px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -815,6 +815,7 @@
 
   .planButton {
     padding: 8px 14px;
+    margin-left: 0;
   }
 
   .connectedPillFixed {
