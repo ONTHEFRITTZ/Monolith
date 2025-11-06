@@ -7,6 +7,7 @@ import {
 import { LocalAccountSigner } from '@alchemy/aa-core';
 import { Account, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import type { Hex } from 'viem';
 import { arbitrumSepolia, sepolia } from 'viem/chains';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -208,7 +209,7 @@ export class AaService {
         ? this.config.getOrThrow<string>('ALCHEMY_ARB_RPC_URL')
         : this.config.getOrThrow<string>('ALCHEMY_ETH_RPC_URL');
 
-    const ownerPrivateKey = `0x${randomBytes(32).toString('hex')}`;
+    const ownerPrivateKey = `0x${randomBytes(32).toString('hex')}` as Hex;
     const owner = LocalAccountSigner.privateKeyToAccountSigner(ownerPrivateKey);
     const ownerAddress = await owner.getAddress();
 
@@ -221,7 +222,7 @@ export class AaService {
     const client = await createModularAccountAlchemyClient({
       apiKey,
       chain,
-      owner,
+      owners: [owner],
       gasManagerConfig: policyId ? { policyId } : undefined,
     });
 
