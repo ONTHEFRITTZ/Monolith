@@ -7,8 +7,20 @@ import type {
   WalletProvider,
 } from "./types";
 
-const RAW_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
-const API_BASE_URL = RAW_API_BASE.replace(/\/$/, "");
+function resolveApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  if (typeof window !== "undefined") {
+    if (window.location.hostname === "localhost" && window.location.port === "3000") {
+      return `${window.location.protocol}//${window.location.hostname}:3001`;
+    }
+    return window.location.origin;
+  }
+  return "http://localhost:3001";
+}
+
+const API_BASE_URL = resolveApiBase().replace(/\/$/, "");
 const API_ROOT = `${API_BASE_URL}/api`;
 
 const chainDisplayName: Record<SupportedChain, string> = {

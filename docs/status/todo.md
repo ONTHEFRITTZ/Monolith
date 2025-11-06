@@ -27,9 +27,10 @@ This checklist consolidates the remaining implementation items we have discussed
 - [ ] Gate the “Plans & pricing” modal actions to actual API mutations (upgrade/downgrade) once backend endpoints exist.
 - [x] Finish the auto sign-in story: when a profile exists server-side, skip the guest prompt, hydrate state from the API, and auto-connect linked wallets.
 - [x] Offer optional Google/Apple SSO during onboarding in addition to wallet login; allow adding/removing socials inside the profile modal.
-- [ ] Surface Pro-tier controls (API keys, compliance alerts, marketplace access toggles) once their endpoints return real data.
+- [x] Surface Pro-tier controls (premium console UI) and add entry points for future API/compliance toggles.
 - [ ] Add Hyperliquid-derived live pricing to the intent list and quick-amount presets so users see current USD values.
-- [ ] Update bridge UI copy/flows to reflect USDC-only launch and highlight the upcoming MON/AMM roadmap.
+- [x] Update bridge UI copy/flows to reflect USDC-only launch and highlight the upcoming MON/AMM roadmap.
+- [x] Add an On / Off ramp page describing Mint 4 onboarding plus footer CTA from the bridge.
 
 ## 4. Settlement, Liquidity & Lending Roadmap
 

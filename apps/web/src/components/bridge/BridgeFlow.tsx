@@ -440,13 +440,6 @@ export function BridgeFlow() {
               priority
             />
           </div>
-          <button
-            type="button"
-            className={styles.consoleButton}
-            onClick={() => router.push("/ramp")}
-          >
-            On / Off ramp
-          </button>
         </div>
         <div className={styles.headerRight}>
           {connectedCount > 0 ? (
@@ -523,15 +516,6 @@ export function BridgeFlow() {
                 ))}
               </ul>
             </div>
-          ) : null}
-          {!guestMode ? (
-            <button
-              type="button"
-              className={styles.consoleButton}
-              onClick={() => setPremiumOpen(true)}
-            >
-              Console
-            </button>
           ) : null}
           {guestMode ? (
             <button
@@ -622,6 +606,15 @@ export function BridgeFlow() {
       <Link href="/ramp" className={styles.rampFloatingButton}>
         On / Off ramp
       </Link>
+      {!guestMode ? (
+        <button
+          type="button"
+          className={styles.consoleFloatingButton}
+          onClick={() => setPremiumOpen(true)}
+        >
+          Console
+        </button>
+      ) : null}
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}
