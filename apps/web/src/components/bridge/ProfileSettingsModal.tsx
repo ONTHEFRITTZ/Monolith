@@ -221,18 +221,20 @@ export function ProfileSettingsModal({
               {planMeta.preferenceToggles.length > 0 ? (
                 <div className={styles.profileToggleGroup}>
                   {planMeta.preferenceToggles.map((toggle) => (
-                    <label key={toggle.key} className={styles.profileToggleRow}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(preferences[toggle.key])}
-                        onChange={() => handlePreferenceToggle(toggle)}
-                        disabled={isBusy}
-                      />
-                      <span>
-                        <strong>{toggle.title}</strong>
-                        <small>{toggle.description}</small>
-                      </span>
-                    </label>
+                    <button
+                      key={toggle.key}
+                      type="button"
+                      className={
+                        preferences[toggle.key]
+                          ? styles.profileActionButtonActive
+                          : styles.profileActionButton
+                      }
+                      onClick={() => handlePreferenceToggle(toggle)}
+                      disabled={isBusy}
+                    >
+                      <strong>{toggle.title}</strong>
+                      <small>{toggle.description}</small>
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -304,22 +306,29 @@ export function ProfileSettingsModal({
               </div>
 
               <div className={styles.profileToggleGroup}>
-                {SOCIAL_PROVIDERS.map((provider) => (
-                  <label key={provider.id} className={styles.profileToggleRow}>
-                    <input
-                      type="checkbox"
-                      checked={socialLogins.has(provider.id)}
-                      onChange={() => handleSocialToggle(provider.id)}
+                {SOCIAL_PROVIDERS.map((provider) => {
+                  const connected = socialLogins.has(provider.id);
+                  return (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      className={
+                        connected ? styles.profileActionButtonActive : styles.profileActionButton
+                      }
+                      onClick={() => handleSocialToggle(provider.id)}
                       disabled={isBusy}
-                    />
-                    <span>
-                      <strong>{provider.label}</strong>
+                    >
+                      <strong>
+                        {connected ? `Disconnect ${provider.label}` : `Connect ${provider.label}`}
+                      </strong>
                       <small>
-                        {`Allow ${provider.label} to unlock quick sign-in and passwordless recovery.`}
+                        {connected
+                          ? `Stop using ${provider.label} for quick recovery.`
+                          : `Link ${provider.label} for passwordless sign-in & recovery.`}
                       </small>
-                    </span>
-                  </label>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </section>
           </div>

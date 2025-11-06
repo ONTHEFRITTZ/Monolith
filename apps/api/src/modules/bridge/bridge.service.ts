@@ -577,6 +577,7 @@ export class BridgeService {
   async quoteIntent(
     intentId: string,
     amount: number,
+    _slippageBps?: number,
   ): Promise<QuoteResponseDto> {
     const { provider, base } = this.resolveBaseIntent(intentId);
     const sanitizedAmount = this.sanitizeAmount(amount, base.availableAmount);
@@ -614,6 +615,7 @@ export class BridgeService {
   async submitIntent(
     intentId: string,
     amount: number,
+    _slippageBps?: number,
   ): Promise<SubmitBridgeResponseDto> {
     const { provider, base } = this.resolveBaseIntent(intentId);
     const sanitizedAmount = this.sanitizeAmount(amount, base.availableAmount);

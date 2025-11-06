@@ -97,6 +97,11 @@ export class QuoteRequestDto {
   @IsNumber()
   @IsPositive()
   amount!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  slippageBps?: number;
 }
 
 export class QuoteResponseDto {
@@ -134,6 +139,11 @@ export class SubmitBridgeRequestDto {
   @IsNumber()
   @IsPositive()
   amount!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  slippageBps?: number;
 }
 
 export class SubmitBridgeResponseDto {

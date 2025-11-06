@@ -58,8 +58,8 @@ export interface BridgeActions {
   removeProvider: (provider: WalletProvider) => Promise<void>;
   refreshBalances: () => Promise<void>;
   selectIntent: (intent: BalanceIntent | undefined) => void;
-  requestQuote: (intentId: string, amount: number) => Promise<void>;
-  submitBridge: (intentId: string, amount: number) => Promise<void>;
+  requestQuote: (intentId: string, amount: number, slippageBps?: number) => Promise<void>;
+  submitBridge: (intentId: string, amount: number, slippageBps?: number) => Promise<void>;
   resetSubmission: () => void;
   clearError: () => void;
 }

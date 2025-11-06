@@ -87,8 +87,14 @@ export async function fetchBalances(
   });
 }
 
-export async function fetchQuote(intentId: string, amount: number): Promise<QuoteResponse> {
-  const body = JSON.stringify({ intentId, amount });
+export async function fetchQuote(
+  intentId: string,
+  amount: number,
+  slippageBps?: number
+): Promise<QuoteResponse> {
+  const body = JSON.stringify(
+    slippageBps !== undefined ? { intentId, amount, slippageBps } : { intentId, amount }
+  );
 
   return requestApi<QuoteResponse>("/bridge/quote", {
     method: "POST",
@@ -96,8 +102,14 @@ export async function fetchQuote(intentId: string, amount: number): Promise<Quot
   });
 }
 
-export async function submitBridge(intentId: string, amount: number): Promise<BridgeSubmission> {
-  const body = JSON.stringify({ intentId, amount });
+export async function submitBridge(
+  intentId: string,
+  amount: number,
+  slippageBps?: number
+): Promise<BridgeSubmission> {
+  const body = JSON.stringify(
+    slippageBps !== undefined ? { intentId, amount, slippageBps } : { intentId, amount }
+  );
 
   const result = await requestApi<SubmitBridgeApiResponse>("/bridge/submit", {
     method: "POST",

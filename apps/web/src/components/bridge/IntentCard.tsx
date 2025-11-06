@@ -9,7 +9,7 @@ interface IntentCardProps {
 
 export function IntentCard({ intent, onSelect }: IntentCardProps) {
   const label = `${intent.sourceToken.toUpperCase()} \u00b7 ${chainLabel(intent.sourceChain)} \u2192 ${intent.destinationToken.toUpperCase()} \u00b7 ${chainLabel(intent.destinationChain)}`;
-  const fee = intent.feeBps / 100;
+  const feePercent = intent.feeBps / 100;
 
   return (
     <button type="button" className={styles.intentCard} onClick={() => onSelect(intent)}>
@@ -23,7 +23,7 @@ export function IntentCard({ intent, onSelect }: IntentCardProps) {
         <span className={styles.intentBalance}>{intent.availableFormatted}</span>
         <div className={styles.intentTags}>
           <span className={styles.tag}>{providerLabel(intent.provider)}</span>
-          <span className={styles.tag}>{fee.toFixed(2)} bps fee</span>
+          <span className={styles.tag}>{feePercent.toFixed(2)}% fee</span>
           <span className={`${styles.tag} ${styles.tagNeutral}`}>{intent.etaMinutes} min ETA</span>
         </div>
       </div>

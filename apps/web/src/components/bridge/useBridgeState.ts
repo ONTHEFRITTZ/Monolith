@@ -115,48 +115,56 @@ export function useBridgeState(): { state: BridgeState; actions: BridgeActions }
     }));
   }, []);
 
-  const requestQuote = useCallback(async (intentId: string, amount: number) => {
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-      const quote = await fetchQuote(intentId, amount);
-      setState((prev) => ({
-        ...prev,
-        quote,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error(error);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error:
-          error instanceof Error ? error.message : "Quote request failed. Try a different amount.",
-      }));
-    }
-  }, []);
+  const requestQuote = useCallback(
+    async (intentId: string, amount: number, slippageBps?: number) => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
+        const quote = await fetchQuote(intentId, amount, slippageBps);
+        setState((prev) => ({
+          ...prev,
+          quote,
+          isLoading: false,
+        }));
+      } catch (error) {
+        console.error(error);
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Quote request failed. Try a different amount.",
+        }));
+      }
+    },
+    []
+  );
 
-  const handleSubmit = useCallback(async (intentId: string, amount: number) => {
-    try {
-      setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-      const submission = await submitBridge(intentId, amount);
-      setState((prev) => ({
-        ...prev,
-        submission: {
-          intentId: submission.intentId,
-          txHash: submission.txHash,
-          status: submission.status,
-        },
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error(error);
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Bridge submission failed. Please retry.",
-      }));
-    }
-  }, []);
+  const handleSubmit = useCallback(
+    async (intentId: string, amount: number, slippageBps?: number) => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
+        const submission = await submitBridge(intentId, amount, slippageBps);
+        setState((prev) => ({
+          ...prev,
+          submission: {
+            intentId: submission.intentId,
+            txHash: submission.txHash,
+            status: submission.status,
+          },
+          isLoading: false,
+        }));
+      } catch (error) {
+        console.error(error);
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : "Bridge submission failed. Please retry.",
+        }));
+      }
+    },
+    []
+  );
 
   const disconnectAll = useCallback(async () => {
     await Promise.all(

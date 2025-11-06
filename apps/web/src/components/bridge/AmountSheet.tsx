@@ -1,3 +1,4 @@
+import type { ChangeEvent } from "react";
 import styles from "./BridgeFlow.module.css";
 import type { BalanceIntent, BridgeSubmission, QuoteResponse } from "./types";
 import { chainLabel, providerLabel } from "./bridgeClient";
@@ -14,9 +15,12 @@ interface AmountSheetProps {
   quote?: QuoteResponse;
   isLoading: boolean;
   submission?: BridgeSubmission;
+  slippage: number;
+  onSlippageChange: (value: number) => void;
 }
 
 const quickPercents = [25, 50, 75, 100];
+const slippagePresets = [0.1, 0.5, 1, 2];
 
 export function AmountSheet({
   open,
@@ -30,6 +34,8 @@ export function AmountSheet({
   quote,
   isLoading,
   submission,
+  slippage,
+  onSlippageChange,
 }: AmountSheetProps) {
   if (!open || !intent) {
     return null;
@@ -38,6 +44,18 @@ export function AmountSheet({
   const displayLabel = `${intent.sourceToken.toUpperCase()} · ${chainLabel(intent.sourceChain)} → ${intent.destinationToken.toUpperCase()} · ${chainLabel(intent.destinationChain)}`;
   const amountNumber = Number(amountInput) || 0;
   const actionLabel = quote ? `Sign with ${providerLabel(intent.provider)}` : "Preview Bridge";
+  const handleSlippageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    if (raw === "") {
+      onSlippageChange(0);
+      return;
+    }
+    const next = Number.parseFloat(raw);
+    if (Number.isNaN(next)) {
+      return;
+    }
+    onSlippageChange(next);
+  };
 
   return (
     <div className={styles.sheetOverlay} role="dialog" aria-modal="true">
@@ -101,8 +119,8 @@ export function AmountSheet({
             <span>{intent.availableFormatted}</span>
           </div>
           <div className={styles.summaryRow}>
-            <span>Est. Fee</span>
-            <span>{(intent.feeBps / 100).toFixed(2)} bps</span>
+            <span>Fee rate</span>
+            <span>{(intent.feeBps / 100).toFixed(2)}%</span>
           </div>
           {quote ? (
             <>
@@ -131,6 +149,43 @@ export function AmountSheet({
               <span>Enter amount to preview</span>
             </div>
           )}
+        </div>
+
+        <div className={styles.slippageBlock}>
+          <div className={styles.slippageHeader}>
+            <span className={styles.fieldLabel}>Slippage tolerance</span>
+            <span className={styles.slippageValue}>{slippage.toFixed(2)}%</span>
+          </div>
+          <div className={styles.slippageOptions}>
+            {slippagePresets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className={
+                  Math.abs(slippage - preset) < 0.001
+                    ? styles.slippageButtonActive
+                    : styles.slippageButton
+                }
+                onClick={() => onSlippageChange(preset)}
+                disabled={isLoading}
+              >
+                {preset.toFixed(1)}%
+              </button>
+            ))}
+            <label className={styles.slippageInputRow}>
+              <span>Custom</span>
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={slippage}
+                onChange={handleSlippageInputChange}
+                disabled={isLoading}
+              />
+              <span className={styles.slippageSuffix}>%</span>
+            </label>
+          </div>
         </div>
 
         {!quote ? (

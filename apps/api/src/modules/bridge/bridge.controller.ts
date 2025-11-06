@@ -35,14 +35,22 @@ export class BridgeController {
 
   @Post('quote')
   async quote(@Body() payload: QuoteRequestDto): Promise<QuoteResponseDto> {
-    return this.bridgeService.quoteIntent(payload.intentId, payload.amount);
+    return this.bridgeService.quoteIntent(
+      payload.intentId,
+      payload.amount,
+      payload.slippageBps,
+    );
   }
 
   @Post('submit')
   async submit(
     @Body() payload: SubmitBridgeRequestDto,
   ): Promise<SubmitBridgeResponseDto> {
-    return this.bridgeService.submitIntent(payload.intentId, payload.amount);
+    return this.bridgeService.submitIntent(
+      payload.intentId,
+      payload.amount,
+      payload.slippageBps,
+    );
   }
 
   @Get('intents/:id/status')

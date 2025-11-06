@@ -22,7 +22,7 @@ const TIERS: readonly TierDefinition[] = [
     services: [
       "Alchemy smart account onboarding",
       "Monolith paymaster coverage up to cap",
-      "Standard bridge routing (6-12 bps)",
+      "Standard bridge routing (0.06%-0.12%)",
       "Email support and incident recovery",
     ],
     ideal: "New wallets, retail users, pilots",

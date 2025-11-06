@@ -335,20 +335,32 @@
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  padding: 16px;
+  align-items: center;
+  padding: 24px;
   z-index: 20;
 }
 
 .sheetContent {
   width: min(640px, 100%);
   background: rgba(15, 17, 22, 0.96);
-  border-radius: 20px 20px 12px 12px;
+  border-radius: 22px;
   padding: 24px 20px 28px;
   border: 1px solid rgba(124, 241, 181, 0.15);
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+@media (max-width: 720px) {
+  .sheetOverlay {
+    align-items: flex-end;
+    padding: 16px;
+  }
+
+  .sheetContent {
+    border-radius: 20px 20px 12px 12px;
+    width: min(640px, 100%);
+  }
 }
 
 .sheetHeader {
@@ -432,6 +444,117 @@
   justify-content: space-between;
   font-size: 14px;
   color: #d0d7e2;
+}
+
+.slippageBlock {
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.slippageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slippageValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(229, 253, 255, 0.9);
+  letter-spacing: 0.04em;
+}
+
+.slippageOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.slippageButton,
+.slippageButtonActive {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.slippageButton {
+  background: rgba(24, 12, 40, 0.55);
+  border: 1px solid rgba(210, 145, 255, 0.25);
+  color: rgba(249, 228, 255, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(210, 145, 255, 0.12);
+}
+
+.slippageButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(34, 18, 52, 0.7);
+  border-color: rgba(215, 160, 255, 0.38);
+}
+
+.slippageButtonActive {
+  background: linear-gradient(135deg, rgba(210, 102, 255, 0.85), rgba(120, 60, 220, 0.92));
+  border: 1px solid rgba(240, 190, 255, 0.6);
+  color: #12061f;
+  box-shadow: 0 14px 32px rgba(118, 48, 199, 0.35);
+}
+
+.slippageButtonActive:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(133, 62, 208, 0.45);
+}
+
+.slippageButton:disabled,
+.slippageButtonActive:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.slippageInputRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(24, 12, 40, 0.55);
+  border: 1px solid rgba(210, 145, 255, 0.25);
+  color: rgba(249, 228, 255, 0.85);
+  font-size: 12px;
+}
+
+.slippageInputRow input {
+  width: 64px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  outline: none;
+}
+
+.slippageInputRow input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.slippageSuffix {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.75;
 }
 
 .statusBar {
@@ -553,15 +676,134 @@
 }
 
 .connectedPillFixed {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(35, 14, 62, 0.82);
+  border: 1px solid rgba(210, 145, 255, 0.35);
+  box-shadow: 0 22px 48px rgba(120, 48, 210, 0.42);
+  z-index: 30;
+  min-width: 260px;
+}
+
+.connectedPillRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.connectedHeading {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(248, 229, 255, 0.9);
+}
+
+.connectedActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pillButton {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pillButtonPrimary {
+  background: linear-gradient(135deg, rgba(220, 110, 255, 0.85), rgba(140, 60, 220, 0.9));
+  color: #12061f;
+  box-shadow: 0 10px 24px rgba(125, 60, 210, 0.45);
+}
+
+.pillButtonPrimary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(148, 76, 220, 0.55);
+}
+
+.pillButtonSecondary {
+  background: rgba(24, 12, 40, 0.55);
+  color: rgba(249, 228, 255, 0.9);
+  border: 1px solid rgba(210, 145, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(210, 145, 255, 0.18);
+}
+
+.pillButtonSecondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(34, 18, 52, 0.7);
+  border-color: rgba(215, 160, 255, 0.42);
+}
+
+.pillButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.connectedWalletList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.connectedWalletItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(22, 10, 36, 0.65);
+  border: 1px solid rgba(210, 145, 255, 0.2);
+}
+
+.connectedWalletIcon {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: rgba(35, 14, 62, 0.78);
-  border: 1px solid rgba(210, 145, 255, 0.35);
-  box-shadow: 0 18px 40px rgba(120, 48, 210, 0.42);
-  z-index: 30;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: rgba(44, 20, 70, 0.9);
+  border: 1px solid rgba(210, 145, 255, 0.3);
+  overflow: hidden;
+}
+
+.connectedWalletText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.connectedWalletProvider {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(248, 229, 255, 0.85);
+  letter-spacing: 0.02em;
+}
+
+.connectedWalletAddress {
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: rgba(210, 233, 255, 0.8);
 }
 
 @media (max-width: 900px) {
@@ -576,6 +818,10 @@
 
   .connectedPillFixed {
     display: none;
+  }
+
+  .profileButtonMobile {
+    display: inline-flex;
   }
 }
 
@@ -753,6 +999,10 @@
   box-shadow: inset 0 0 0 1px rgba(152, 110, 255, 0.45);
 }
 
+.profileButtonMobile {
+  display: none;
+}
+
 .signInButton {
   border: none;
   border-radius: 999px;
@@ -926,6 +1176,69 @@
 .profileToggleGroup {
   display: grid;
   gap: 12px;
+}
+
+.profileActionButton,
+.profileActionButtonActive {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(210, 145, 255, 0.18);
+  background: rgba(26, 12, 40, 0.58);
+  color: #f5f7fa;
+  cursor: pointer;
+  font-weight: 600;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease;
+  box-shadow: 0 12px 28px rgba(95, 48, 168, 0.22);
+}
+
+.profileActionButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(34, 16, 52, 0.7);
+  border-color: rgba(215, 155, 255, 0.3);
+  box-shadow: 0 16px 34px rgba(118, 62, 195, 0.32);
+}
+
+.profileActionButtonActive {
+  background: linear-gradient(135deg, rgba(210, 102, 255, 0.85), rgba(120, 62, 220, 0.92));
+  border: 1px solid rgba(240, 190, 255, 0.6);
+  color: #12061f;
+  box-shadow: 0 18px 40px rgba(118, 48, 199, 0.45);
+}
+
+.profileActionButtonActive:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 46px rgba(133, 62, 208, 0.5);
+}
+
+.profileActionButton:disabled,
+.profileActionButtonActive:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.profileActionButton strong,
+.profileActionButtonActive strong {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.profileActionButton small,
+.profileActionButtonActive small {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.78;
+  line-height: 1.5;
 }
 
 .profileToggleRow {

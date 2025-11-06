@@ -16,11 +16,11 @@ import { ProfileSettingsModal } from "./ProfileSettingsModal";
 import type { LinkedWallet } from "../onboarding/types";
 import type { StoredProfile } from "@/lib/profile";
 import {
-  readProfile,
   consumeAutoConnectProviders,
   providersFromProfile,
   markProfileAcknowledged,
   isProfileAcknowledged,
+  readProfile,
   writeProfile,
   clearProfileStorage,
   syncProfileWithServer,
@@ -30,6 +30,7 @@ import {
 } from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
+const PROVIDER_DISPLAY_ORDER: WalletProvider[] = ["metamask", "phantom", "backpack"];
 const WALLET_LOGOS: Record<WalletProvider, string> = {
   metamask: "/logos/metamask.png",
   phantom: "/logos/phantom.png",
@@ -38,14 +39,13 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
   const router = useRouter();
-  const initialProfile = readProfile();
-  const [profile, setProfile] = useState<StoredProfile | null>(initialProfile);
+  const [profile, setProfile] = useState<StoredProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
+  const [slippage, setSlippage] = useState(0.5);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [guestMode, setGuestMode] = useState(!initialProfile);
-  const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
+  const [guestMode, setGuestMode] = useState(true);
   const [autoConnectProviders, setAutoConnectProviders] = useState<WalletProvider[] | null>(null);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
   const [profilePromptInitialized, setProfilePromptInitialized] = useState(false);
@@ -87,6 +87,15 @@ export function BridgeFlow() {
   const handleRemoveWalletFromSettings = useCallback(
     async (provider: WalletProvider) => {
       await actions.removeProvider(provider);
+    },
+    [actions]
+  );
+
+  const handleSlippageChange = useCallback(
+    (value: number) => {
+      const clamped = Math.min(5, Math.max(0, value));
+      setSlippage(Number(clamped.toFixed(2)));
+      actions.resetSubmission();
     },
     [actions]
   );
@@ -212,6 +221,7 @@ export function BridgeFlow() {
   const handleSelect = (intent: BalanceIntent) => {
     actions.selectIntent(intent);
     setAmountInput("");
+    setSlippage(0.5);
     setSheetOpen(true);
   };
 
@@ -227,7 +237,8 @@ export function BridgeFlow() {
     if (Number.isNaN(amount) || amount <= 0) {
       return;
     }
-    void actions.requestQuote(state.selectedIntent.id, amount);
+    const slippageBps = Math.round(slippage * 100);
+    void actions.requestQuote(state.selectedIntent.id, amount, slippageBps);
   };
 
   const handleConfirm = async () => {
@@ -236,7 +247,8 @@ export function BridgeFlow() {
     if (Number.isNaN(amount) || amount <= 0) {
       return;
     }
-    await actions.submitBridge(state.selectedIntent.id, amount);
+    const slippageBps = Math.round(slippage * 100);
+    await actions.submitBridge(state.selectedIntent.id, amount, slippageBps);
   };
 
   const handleUpgradePlan = useCallback(async () => {
@@ -301,6 +313,7 @@ export function BridgeFlow() {
 
   const handleCloseSheet = () => {
     setSheetOpen(false);
+    setSlippage(0.5);
     actions.selectIntent(undefined);
   };
 
@@ -311,43 +324,31 @@ export function BridgeFlow() {
         ? "Guest bridging active \u2014 standard routing fee applies. Upgrade to claim sponsorship."
         : "Select a balance below to bridge into Monad.";
 
-  const connectedWallet = state.connectedWallets.length > 0 ? state.connectedWallets[0] : undefined;
-
-  const connectedProviders = useMemo(
-    () => new Set(state.connectedWallets.map((wallet) => wallet.provider)),
+  const orderedConnections = useMemo(
+    () =>
+      PROVIDER_DISPLAY_ORDER.map((provider) =>
+        state.connectedWallets.find((wallet) => wallet.provider === provider)
+      ).filter((wallet): wallet is WalletConnection => Boolean(wallet)),
+    [state.connectedWallets]
+  );
+  const connectedCount = orderedConnections.length;
+  const availableProviders = useMemo(
+    () =>
+      WALLET_OPTIONS.filter(
+        (provider) => !state.connectedWallets.some((wallet) => wallet.provider === provider)
+      ),
     [state.connectedWallets]
   );
 
-  const availableProviders = useMemo(
-    () => WALLET_OPTIONS.filter((provider) => !connectedProviders.has(provider)),
-    [connectedProviders]
-  );
-
-  useEffect(() => {
-    if (!state.isConnected) {
-      setWalletSelectorOpen(false);
-    }
-  }, [state.isConnected]);
-
-  useEffect(() => {
-    if (availableProviders.length === 0 && walletSelectorOpen) {
-      setWalletSelectorOpen(false);
-    }
-  }, [availableProviders.length, walletSelectorOpen]);
-
   const handleProviderConnect = async (provider: WalletProvider) => {
-    try {
-      await actions.connectProvider(provider);
-    } finally {
-      setWalletSelectorOpen(false);
-    }
+    await actions.connectProvider(provider);
   };
 
   const renderWalletButtons = () => {
-    const shouldShowGrid =
-      !state.isConnected || state.connectedWallets.length === 0 || walletSelectorOpen;
-
-    if (!shouldShowGrid || availableProviders.length === 0) {
+    if (state.connectedWallets.length > 0) {
+      return null;
+    }
+    if (availableProviders.length === 0) {
       return null;
     }
 
@@ -378,8 +379,6 @@ export function BridgeFlow() {
     );
   };
 
-  const hasRemainingProviders = availableProviders.length > 0;
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.utilityRail}>
@@ -395,37 +394,70 @@ export function BridgeFlow() {
           >
             Sign in
           </button>
-        ) : profile ? (
+        ) : null}
+
+        {!guestMode && profile ? (
           <button
             type="button"
-            className={styles.profileButton}
+            className={`${styles.profileButton} ${styles.profileButtonMobile}`}
             onClick={() => setProfileSettingsOpen(true)}
           >
-            {profile.sponsorshipPlan === "pro" ? "Pro profile" : "Profile"}
+            Profile
           </button>
         ) : null}
 
-        {state.isConnected && connectedWallet ? (
+        {connectedCount > 0 ? (
           <div className={styles.connectedPillFixed}>
-            <div className={styles.connectedPillMeta}>
-              <Image
-                src={WALLET_LOGOS[connectedWallet.provider]}
-                alt={`${providerLabel(connectedWallet.provider)} logo`}
-                width={32}
-                height={32}
-              />
-              <span className={styles.connectedAddress}>
-                {shortAddress(connectedWallet.address)}
+            <div className={styles.connectedPillRow}>
+              <span className={styles.connectedHeading}>
+                {connectedCount} wallet{connectedCount > 1 ? "s" : ""} connected
               </span>
+              <div className={styles.connectedActions}>
+                {profile ? (
+                  <button
+                    type="button"
+                    className={`${styles.pillButton} ${styles.pillButtonSecondary}`}
+                    onClick={() => setProfileSettingsOpen(true)}
+                    disabled={state.isLoading}
+                  >
+                    Profile
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`${styles.pillButton} ${styles.pillButtonPrimary}`}
+                  onClick={() => void actions.disconnectAll()}
+                  disabled={state.isLoading}
+                >
+                  Disconnect
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              className={styles.disconnectButton}
-              onClick={() => void actions.disconnectAll()}
-              disabled={state.isLoading}
-            >
-              Disconnect
-            </button>
+            <ul className={styles.connectedWalletList}>
+              {orderedConnections.map((wallet) => (
+                <li
+                  key={`${wallet.provider}:${wallet.address}`}
+                  className={styles.connectedWalletItem}
+                >
+                  <span className={styles.connectedWalletIcon}>
+                    <Image
+                      src={WALLET_LOGOS[wallet.provider]}
+                      alt={`${providerLabel(wallet.provider)} logo`}
+                      width={20}
+                      height={20}
+                    />
+                  </span>
+                  <div className={styles.connectedWalletText}>
+                    <span className={styles.connectedWalletProvider}>
+                      {providerLabel(wallet.provider)}
+                    </span>
+                    <span className={styles.connectedWalletAddress}>
+                      {shortAddress(wallet.address)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </div>
@@ -450,16 +482,6 @@ export function BridgeFlow() {
 
         {state.isConnected ? (
           <div className={styles.connectActions}>
-            {hasRemainingProviders ? (
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => setWalletSelectorOpen((prev) => !prev)}
-                disabled={state.isLoading}
-              >
-                {walletSelectorOpen ? "Close wallet list" : "Add wallet"}
-              </button>
-            ) : null}
             <button
               type="button"
               className={styles.primaryButton}
@@ -520,6 +542,8 @@ export function BridgeFlow() {
         quote={state.quote}
         isLoading={state.isLoading}
         submission={state.submission}
+        slippage={slippage}
+        onSlippageChange={handleSlippageChange}
       />
 
       <PlansPricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
@@ -539,7 +563,7 @@ export function BridgeFlow() {
         onSaveProfileSettings={handleProfileSettingsSave}
         onSignOut={handleSignOut}
         onUpgradePlan={handleUpgradePlan}
-        availableProviders={WALLET_OPTIONS}
+        availableProviders={availableProviders}
         walletLogos={WALLET_LOGOS}
         isBusy={state.isLoading || planUpdating || settingsUpdating}
       />
