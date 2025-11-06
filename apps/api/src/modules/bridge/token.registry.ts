@@ -24,7 +24,7 @@ export const TOKEN_REGISTRY: Record<
     mon: {
       contractAddress: null,
       decimals: 18,
-      fallbackUsdPrice: 1,
+      fallbackUsdPrice: 3,
     },
   },
   arbitrum: {
@@ -41,7 +41,7 @@ export const TOKEN_REGISTRY: Record<
     mon: {
       contractAddress: null,
       decimals: 18,
-      fallbackUsdPrice: 1,
+      fallbackUsdPrice: 3,
     },
   },
   solana: {
@@ -58,7 +58,7 @@ export const TOKEN_REGISTRY: Record<
     mon: {
       contractAddress: null,
       decimals: 18,
-      fallbackUsdPrice: 1,
+      fallbackUsdPrice: 3,
     },
   },
   monad: {
@@ -75,7 +75,7 @@ export const TOKEN_REGISTRY: Record<
     mon: {
       contractAddress: null,
       decimals: 18,
-      fallbackUsdPrice: 1,
+      fallbackUsdPrice: 3,
     },
   },
 };

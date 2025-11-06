@@ -10,7 +10,7 @@ interface OnboardingStepCompletedProps {
 export function OnboardingStepCompleted({ state, onReset }: OnboardingStepCompletedProps) {
   return (
     <div className={styles.stepPanel}>
-      <div className={styles.completionIcon}>✓</div>
+      <div className={styles.completionIcon}>{"\u2713"}</div>
       <h2 className={styles.completionTitle}>Smart account ready</h2>
       <p className={styles.stepDescription}>
         Your account is live with the selected paymaster plan. We&apos;ll sync bridge balances and
@@ -31,12 +31,12 @@ export function OnboardingStepCompleted({ state, onReset }: OnboardingStepComple
       </div>
 
       <div className={styles.footerActions}>
-        <Link className={styles.primaryButton} href="/">
-          Bridge USDC ↔ MON
-        </Link>
         <button type="button" className={styles.ghostButton} onClick={onReset}>
-          Start again
+          Start over
         </button>
+        <Link className={styles.primaryButton} href="/">
+          Bridge USDC &lt;-&gt; MON
+        </Link>
       </div>
     </div>
   );

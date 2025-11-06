@@ -76,6 +76,9 @@
   font-size: clamp(28px, 6vw, 44px);
   line-height: 1.15;
   font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: #fde6ff;
 }
 
@@ -144,10 +147,22 @@
 
 .walletGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   width: min(720px, 100%);
   margin: 18px 0 12px;
+}
+
+@media (max-width: 680px) {
+  .walletGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .walletGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .walletButton {

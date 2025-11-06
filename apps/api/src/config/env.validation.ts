@@ -38,6 +38,14 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   PAYMASTER_API_KEY?: string;
+
+  @IsOptional()
+  @IsUrl()
+  HYPERLIQUID_PRICE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  HYPERLIQUID_MON_SYMBOL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

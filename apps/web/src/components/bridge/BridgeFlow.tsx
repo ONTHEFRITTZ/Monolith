@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./BridgeFlow.module.css";
 import { useBridgeState } from "./useBridgeState";
 import { BalanceIntentList } from "./BalanceIntentList";
@@ -26,6 +26,7 @@ export function BridgeFlow() {
   const [pricingOpen, setPricingOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(true);
   const [guestMode, setGuestMode] = useState(false);
+  const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
 
   const handleSelect = (intent: BalanceIntent) => {
     actions.selectIntent(intent);
@@ -73,41 +74,77 @@ export function BridgeFlow() {
     !state.isConnected || state.connectedWallets.length === 0
       ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
       : guestMode
-        ? "Guest bridging active — standard routing fee applies. Upgrade to claim sponsorship."
+        ? "Guest bridging active \u2014 standard routing fee applies. Upgrade to claim sponsorship."
         : "Select a balance below to bridge into Monad.";
 
   const connectedWallet = state.connectedWallets.length > 0 ? state.connectedWallets[0] : undefined;
 
-  const renderWalletButtons = () => {
-    if (!state.isConnected || state.connectedWallets.length === 0) {
-      return (
-        <div className={styles.walletGrid}>
-          {WALLET_OPTIONS.map((provider) => (
-            <button
-              key={provider}
-              type="button"
-              className={styles.walletButton}
-              onClick={() => void actions.connectProvider(provider)}
-              disabled={state.isLoading}
-            >
-              <div className={styles.walletImage}>
-                <Image
-                  src={WALLET_LOGOS[provider]}
-                  alt={`${providerLabel(provider)} logo`}
-                  fill
-                  sizes="64px"
-                />
-              </div>
-              <span className={styles.walletButtonLabel}>
-                {state.isLoading ? "Connecting..." : providerLabel(provider)}
-              </span>
-            </button>
-          ))}
-        </div>
-      );
+  const connectedProviders = useMemo(
+    () => new Set(state.connectedWallets.map((wallet) => wallet.provider)),
+    [state.connectedWallets]
+  );
+
+  const availableProviders = useMemo(
+    () => WALLET_OPTIONS.filter((provider) => !connectedProviders.has(provider)),
+    [connectedProviders]
+  );
+
+  useEffect(() => {
+    if (!state.isConnected) {
+      setWalletSelectorOpen(false);
     }
-    return null;
+  }, [state.isConnected]);
+
+  useEffect(() => {
+    if (availableProviders.length === 0 && walletSelectorOpen) {
+      setWalletSelectorOpen(false);
+    }
+  }, [availableProviders.length, walletSelectorOpen]);
+
+  const handleProviderConnect = async (provider: WalletProvider) => {
+    try {
+      await actions.connectProvider(provider);
+    } finally {
+      setWalletSelectorOpen(false);
+    }
   };
+
+  const renderWalletButtons = () => {
+    const shouldShowGrid =
+      !state.isConnected || state.connectedWallets.length === 0 || walletSelectorOpen;
+
+    if (!shouldShowGrid || availableProviders.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className={styles.walletGrid}>
+        {availableProviders.map((provider) => (
+          <button
+            key={provider}
+            type="button"
+            className={styles.walletButton}
+            onClick={() => void handleProviderConnect(provider)}
+            disabled={state.isLoading}
+          >
+            <div className={styles.walletImage}>
+              <Image
+                src={WALLET_LOGOS[provider]}
+                alt={`${providerLabel(provider)} logo`}
+                fill
+                sizes="64px"
+              />
+            </div>
+            <span className={styles.walletButtonLabel}>
+              {state.isLoading ? "Connecting..." : providerLabel(provider)}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const hasRemainingProviders = availableProviders.length > 0;
 
   return (
     <div className={styles.wrapper}>
@@ -153,7 +190,7 @@ export function BridgeFlow() {
 
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
-          <h1 className={styles.headline}>Bridge assets to Monad in seconds</h1>
+          <h1 className={styles.headline}>BRIDGE</h1>
         </div>
         <p className={styles.subline}>{connectedSummary}</p>
 
@@ -161,6 +198,16 @@ export function BridgeFlow() {
 
         {state.isConnected ? (
           <div className={styles.connectActions}>
+            {hasRemainingProviders ? (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setWalletSelectorOpen((prev) => !prev)}
+                disabled={state.isLoading}
+              >
+                {walletSelectorOpen ? "Close wallet list" : "Add wallet"}
+              </button>
+            ) : null}
             <button
               type="button"
               className={styles.primaryButton}

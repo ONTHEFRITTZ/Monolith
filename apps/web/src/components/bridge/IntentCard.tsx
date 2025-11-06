@@ -8,7 +8,7 @@ interface IntentCardProps {
 }
 
 export function IntentCard({ intent, onSelect }: IntentCardProps) {
-  const label = `${intent.sourceToken.toUpperCase()} · ${chainLabel(intent.sourceChain)} → ${intent.destinationToken.toUpperCase()} · ${chainLabel(intent.destinationChain)}`;
+  const label = `${intent.sourceToken.toUpperCase()} \u00b7 ${chainLabel(intent.sourceChain)} \u2192 ${intent.destinationToken.toUpperCase()} \u00b7 ${chainLabel(intent.destinationChain)}`;
   const fee = intent.feeBps / 100;
 
   return (
@@ -16,7 +16,7 @@ export function IntentCard({ intent, onSelect }: IntentCardProps) {
       <div className={styles.intentCardLeft}>
         <p className={styles.intentTitle}>{label}</p>
         <p className={styles.intentSubtitle}>
-          Available {intent.availableFormatted} · ~${intent.usdValue.toFixed(2)} USD
+          Available {intent.availableFormatted} \u00b7 ~${intent.usdValue.toFixed(2)} USD
         </p>
       </div>
       <div className={styles.intentMeta}>
