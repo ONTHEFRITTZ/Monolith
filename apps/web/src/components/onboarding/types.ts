@@ -20,8 +20,6 @@ export interface SponsorshipEstimate {
   recommended: boolean;
 }
 
-import type { SupportedChain, WalletProvider } from "../bridge/types";
-
 export interface LinkedWallet {
   provider: WalletProvider;
   address: string;
@@ -74,4 +72,13 @@ export interface OnboardingActions {
   setProcessing: (value: boolean) => void;
   setError: (message?: string) => void;
   complete: (payload: { accountAddress: string; paymasterPolicyId: string }) => void;
+}
+
+export interface StoredProfile {
+  sessionId: string;
+  smartAccountAddress: string;
+  ownerAddress?: string;
+  loginType: LoginType;
+  paymasterPolicyId?: string;
+  linkedWallets: LinkedWallet[];
 }

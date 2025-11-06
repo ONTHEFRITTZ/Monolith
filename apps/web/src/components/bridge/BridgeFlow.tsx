@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./BridgeFlow.module.css";
 import { useBridgeState } from "./useBridgeState";
+import type { StoredProfile } from "../onboarding/types";
 import { BalanceIntentList } from "./BalanceIntentList";
 import { AmountSheet } from "./AmountSheet";
 import { BridgeStatusBar } from "./BridgeStatusBar";
@@ -19,36 +20,58 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   backpack: "/logos/backpack.png",
 };
 const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
+const PROFILE_ACK_STORAGE_KEY = "monolith:bridge:profileAcknowledged";
 
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [amountInput, setAmountInput] = useState("");
   const [pricingOpen, setPricingOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
   const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
   const [autoConnectProviders, setAutoConnectProviders] = useState<WalletProvider[] | null>(null);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
+  const [profilePromptInitialized, setProfilePromptInitialized] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-    const raw = window.localStorage.getItem(AUTO_CONNECT_STORAGE_KEY);
-    if (!raw) {
-      return;
-    }
-    window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
-    try {
-      const parsed = JSON.parse(raw) as WalletProvider[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        setAutoConnectProviders(parsed);
+
+    const profileRaw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (profileRaw) {
+      try {
+        const profile = JSON.parse(profileRaw) as StoredProfile;
+        const providers = providersFromProfile(profile);
+        if (providers.length > 0) {
+          setAutoConnectProviders((prev) => mergeProviderLists(prev, providers));
+        }
+        setGuestMode(false);
+        setProfileOpen(false);
+        setProfilePromptInitialized(true);
+      } catch (error) {
+        console.error("Failed to parse stored profile", error);
       }
-    } catch (error) {
-      console.error("Failed to parse auto-connect providers", error);
+    } else if (!profilePromptInitialized) {
+      const hasProfile = window.localStorage.getItem(PROFILE_ACK_STORAGE_KEY) === "true";
+      setProfileOpen(!hasProfile);
+      setProfilePromptInitialized(true);
     }
-  }, []);
+
+    const raw = window.localStorage.getItem(AUTO_CONNECT_STORAGE_KEY);
+    if (raw) {
+      window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
+      try {
+        const parsed = JSON.parse(raw) as WalletProvider[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAutoConnectProviders((prev) => mergeProviderLists(prev, parsed));
+        }
+      } catch (error) {
+        console.error("Failed to parse auto-connect providers", error);
+      }
+    }
+  }, [profilePromptInitialized]);
 
   useEffect(() => {
     if (!autoConnectProviders || autoConnectAttempted) {
@@ -322,7 +345,10 @@ export function BridgeFlow() {
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}
-        onContinueGuest={() => setGuestMode(true)}
+        onContinueGuest={() => {
+          window.localStorage.setItem(PROFILE_ACK_STORAGE_KEY, "true");
+          setGuestMode(true);
+        }}
       />
     </div>
   );
@@ -331,4 +357,26 @@ export function BridgeFlow() {
 function shortAddress(address: string) {
   if (address.length <= 10) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function providersFromProfile(profile: StoredProfile): WalletProvider[] {
+  if (!profile?.linkedWallets) {
+    return [];
+  }
+  const providers = new Set<WalletProvider>();
+  profile.linkedWallets.forEach((wallet) => {
+    if (WALLET_OPTIONS.includes(wallet.provider)) {
+      providers.add(wallet.provider);
+    }
+  });
+  return Array.from(providers);
+}
+
+function mergeProviderLists(
+  current: WalletProvider[] | null,
+  incoming: WalletProvider[]
+): WalletProvider[] {
+  const set = new Set<WalletProvider>(current ?? []);
+  incoming.forEach((provider) => set.add(provider));
+  return Array.from(set);
 }

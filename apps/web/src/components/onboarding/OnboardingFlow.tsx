@@ -9,7 +9,7 @@ import { OnboardingStepGas } from "./OnboardingStepGas";
 import { OnboardingStepReview } from "./OnboardingStepReview";
 import { OnboardingStepCompleted } from "./OnboardingStepCompleted";
 import { useOnboardingState, normaliseContacts } from "./useOnboardingState";
-import type { LinkedWallet, LoginType, SponsorshipPlanId } from "./types";
+import type { LinkedWallet, LoginType, SponsorshipPlanId, StoredProfile } from "./types";
 import type { WalletProvider } from "../bridge/types";
 import { getConnector } from "@/lib/wallets/connectors";
 import {
@@ -30,6 +30,8 @@ const stepMeta = [
 
 const SESSION_STORAGE_KEY = "monolith:onboarding:session";
 const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
+const PROFILE_STORAGE_KEY = "monolith:profile";
+const PROFILE_ACK_STORAGE_KEY = "monolith:bridge:profileAcknowledged";
 
 interface StoredOnboardingSession {
   sessionId: string;
@@ -242,6 +244,18 @@ export function OnboardingFlow() {
       }
 
       queueAutoConnect(state.linkedWallets);
+      acknowledgeProfilePrompt();
+      if (state.sessionId && state.loginType) {
+        persistProfile({
+          sessionId: state.sessionId,
+          smartAccountAddress: response.accountAddress,
+          ownerAddress: state.ownerAddress,
+          loginType: state.loginType,
+          paymasterPolicyId: response.paymasterPolicyId,
+          linkedWallets: state.linkedWallets,
+        });
+      }
+
       actions.complete({
         accountAddress: response.accountAddress,
         paymasterPolicyId: response.paymasterPolicyId,
@@ -276,6 +290,7 @@ export function OnboardingFlow() {
   const handleReset = useCallback(() => {
     actions.reset();
     clearStoredSession();
+    clearProfile();
     setHasResumed(false);
   }, [actions]);
 
@@ -306,7 +321,22 @@ export function OnboardingFlow() {
         if (stored.status !== "completed") {
           actions.advance();
         } else if (stored.accountAddress || stored.paymasterPolicyId) {
-          queueAutoConnect(stored.linkedWallets ?? []);
+          const storedWallets = stored.linkedWallets ?? [];
+          queueAutoConnect(storedWallets);
+          acknowledgeProfilePrompt();
+          const storedLoginType = stored.loginType ?? state.loginType;
+          const storedOwner = stored.ownerAddress ?? state.ownerAddress;
+          const storedAccount = stored.accountAddress ?? stored.ownerAddress ?? storedOwner ?? "";
+          if (storedLoginType && storedAccount) {
+            persistProfile({
+              sessionId: stored.sessionId,
+              smartAccountAddress: storedAccount,
+              ownerAddress: storedOwner,
+              loginType: storedLoginType,
+              paymasterPolicyId: stored.paymasterPolicyId,
+              linkedWallets: storedWallets,
+            });
+          }
           actions.complete({
             accountAddress: stored.accountAddress ?? stored.ownerAddress,
             paymasterPolicyId: stored.paymasterPolicyId ?? "",
@@ -335,6 +365,21 @@ export function OnboardingFlow() {
 
         if (status.status === "completed") {
           queueAutoConnect(nextWallets);
+          acknowledgeProfilePrompt();
+          const statusLoginType = status.loginType ?? stored.loginType ?? state.loginType;
+          const ownerAddress = status.ownerAddress ?? stored.ownerAddress ?? state.ownerAddress;
+          const smartAccountAddress =
+            status.smartAccountAddress ?? stored.accountAddress ?? ownerAddress ?? "";
+          if (statusLoginType && smartAccountAddress) {
+            persistProfile({
+              sessionId: stored.sessionId,
+              smartAccountAddress,
+              ownerAddress,
+              loginType: statusLoginType,
+              paymasterPolicyId: status.paymasterPolicyId ?? stored.paymasterPolicyId,
+              linkedWallets: nextWallets,
+            });
+          }
           actions.complete({
             accountAddress:
               status.smartAccountAddress ?? stored.accountAddress ?? stored.ownerAddress,
@@ -350,7 +395,7 @@ export function OnboardingFlow() {
     };
 
     void resume();
-  }, [actions, hasResumed]);
+  }, [actions, hasResumed, state.loginType, state.ownerAddress]);
 
   useEffect(() => {
     if (state.currentStep !== "completed" && redirectScheduled) {
@@ -558,6 +603,29 @@ function queueAutoConnect(wallets: LinkedWallet[]): void {
   }
 
   window.localStorage.setItem(AUTO_CONNECT_STORAGE_KEY, JSON.stringify(providers));
+}
+
+function acknowledgeProfilePrompt(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(PROFILE_ACK_STORAGE_KEY, "true");
+}
+
+function persistProfile(profile: StoredProfile): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+}
+
+function clearProfile(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+  window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
+  window.localStorage.removeItem(PROFILE_ACK_STORAGE_KEY);
 }
 
 function dedupeLinkedWallets(wallets: LinkedWallet[]): LinkedWallet[] {

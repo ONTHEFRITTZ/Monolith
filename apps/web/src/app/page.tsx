@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import { getConnector } from "@/lib/wallets/connectors";
@@ -14,11 +14,22 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   phantom: "/logos/phantom.png",
   backpack: "/logos/backpack.png",
 };
+const PROFILE_STORAGE_KEY = "monolith:profile";
 
 export default function Home() {
   const router = useRouter();
   const [connecting, setConnecting] = useState<WalletProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const profileRaw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (profileRaw) {
+      router.replace("/bridge");
+    }
+  }, [router]);
 
   const handleConnect = async (provider: WalletProvider) => {
     setError(null);
