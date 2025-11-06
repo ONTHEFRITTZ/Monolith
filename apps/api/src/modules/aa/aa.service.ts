@@ -11,6 +11,8 @@ import type { Hex } from 'viem';
 import { arbitrumSepolia, sepolia } from 'viem/chains';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  LinkedWalletDto,
+  LinkedWalletProvider,
   LoginType,
   OnboardRequestDto,
   OnboardResponseDto,
@@ -297,24 +299,26 @@ export class AaService {
 
 function mapLinkedWallets(
   value: Prisma.JsonValue | null | undefined,
-): Array<{ provider: string; address: string; chains: string[] }> | undefined {
+): LinkedWalletDto[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
 
-  const result: Array<{
-    provider: string;
-    address: string;
-    chains: string[];
-  }> = [];
+  const allowedProviders = new Set(Object.values(LinkedWalletProvider));
+
+  const result: LinkedWalletDto[] = [];
 
   value.forEach((item) => {
     if (!item || typeof item !== 'object') {
       return;
     }
     const entry = item as Record<string, unknown>;
-    const provider =
+    const providerRaw =
       typeof entry.provider === 'string' ? entry.provider : undefined;
+    const provider =
+      providerRaw && allowedProviders.has(providerRaw as LinkedWalletProvider)
+        ? (providerRaw as LinkedWalletProvider)
+        : undefined;
     const address =
       typeof entry.address === 'string' ? entry.address : undefined;
     const chainsRaw = Array.isArray(entry.chains) ? entry.chains : [];
