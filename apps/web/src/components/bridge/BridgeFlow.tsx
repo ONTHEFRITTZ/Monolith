@@ -354,7 +354,7 @@ export function BridgeFlow() {
     }
     return guestMode
       ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
-      : "Select a balance below to bridge into Monad.";
+      : "Select a bridging pair below.";
   }, [guestMode, state.connectedWallets.length, state.isConnected]);
 
   const orderedConnections = useMemo(
@@ -437,9 +437,6 @@ export function BridgeFlow() {
               priority
             />
           </div>
-          <button type="button" className={styles.planButton} onClick={() => setPricingOpen(true)}>
-            Plans &amp; pricing
-          </button>
         </div>
         <div className={styles.headerRight}>
           {connectedCount > 0 ? (
@@ -547,14 +544,6 @@ export function BridgeFlow() {
             >
               {state.isLoading ? "Refreshing..." : "Refresh balances"}
             </button>
-            <button
-              type="button"
-              className={styles.ghostButton}
-              onClick={() => void handleSignOut()}
-              disabled={state.isLoading}
-            >
-              Disconnect all
-            </button>
           </div>
         ) : null}
       </header>
@@ -604,6 +593,13 @@ export function BridgeFlow() {
       />
 
       <PlansPricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
+      <button
+        type="button"
+        className={styles.planFloatingButton}
+        onClick={() => setPricingOpen(true)}
+      >
+        Plans &amp; pricing
+      </button>
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}

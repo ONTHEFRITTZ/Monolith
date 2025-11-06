@@ -58,8 +58,22 @@ export function AmountSheet({
   };
 
   return (
-    <div className={styles.sheetOverlay} role="dialog" aria-modal="true">
-      <div className={styles.sheetContent}>
+    <div
+      className={styles.sheetOverlay}
+      role="dialog"
+      aria-modal="true"
+      onClick={() => {
+        if (!isLoading) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className={styles.sheetContent}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <div className={styles.sheetHeader}>
           <div>
             <h2 className={styles.sheetTitle}>Bridge {intent.sourceToken.toUpperCase()}</h2>
@@ -67,12 +81,7 @@ export function AmountSheet({
               {displayLabel} · {providerLabel(intent.provider)}
             </p>
           </div>
-          <button
-            type="button"
-            className={styles.ghostButton}
-            onClick={onClose}
-            disabled={isLoading}
-          >
+          <button type="button" className={styles.ghostButton} onClick={onClose}>
             Close
           </button>
         </div>

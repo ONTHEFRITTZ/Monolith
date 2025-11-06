@@ -129,11 +129,7 @@ export function PlansPricingModal({ open, onClose }: PlansPricingModalProps) {
           </tbody>
         </table>
 
-        <p className={styles.modalSubtitle}>
-          Expansion roadmap: fiat off-ramps, compliance tooling, analytics APIs, and a partner
-          routing marketplace that can share revenue with sponsored wallets. Starter users can also
-          opt-in to curated insights so we can rebate fees while aggregating anonymised flow data.
-        </p>
+        <p className={styles.modalSubtitle}>*Subject to change</p>
       </div>
     </div>
   );
