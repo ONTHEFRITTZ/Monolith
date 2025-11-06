@@ -24,6 +24,9 @@ import {
   writeProfile,
   clearProfileStorage,
   syncProfileWithServer,
+  updateProfilePlan,
+  updateProfileSettings,
+  type ProfileSettingsPatch,
 } from "@/lib/profile";
 
 const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
@@ -47,6 +50,9 @@ export function BridgeFlow() {
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
   const [profilePromptInitialized, setProfilePromptInitialized] = useState(false);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
+  const [planUpdating, setPlanUpdating] = useState(false);
+  const [settingsUpdating, setSettingsUpdating] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const handleGuestContinue = useCallback(() => {
     clearProfileStorage();
@@ -93,6 +99,7 @@ export function BridgeFlow() {
     setProfileSettingsOpen(false);
     setProfilePromptInitialized(false);
     setProfileOpen(true);
+    setSettingsUpdating(false);
   }, [actions]);
 
   useEffect(() => {
@@ -231,6 +238,59 @@ export function BridgeFlow() {
     }
     await actions.submitBridge(state.selectedIntent.id, amount);
   };
+
+  const handleUpgradePlan = useCallback(async () => {
+    if (!profile?.sessionId) {
+      setPricingOpen(true);
+      return;
+    }
+    setPlanUpdating(true);
+    setProfileError(null);
+    try {
+      const updated = await updateProfilePlan(profile.sessionId, "pro");
+      if (updated) {
+        setProfile(updated);
+        writeProfile(updated);
+        setGuestMode(false);
+        setProfileSettingsOpen(false);
+        setPricingOpen(true);
+      } else {
+        setProfileError("Unable to upgrade plan right now. Please retry later.");
+      }
+    } catch (error) {
+      console.error(error);
+      setProfileError("Plan upgrade failed. Please retry.");
+    } finally {
+      setPlanUpdating(false);
+    }
+  }, [profile, setPricingOpen]);
+
+  const handleProfileSettingsSave = useCallback(
+    async (patch: ProfileSettingsPatch) => {
+      if (!profile?.sessionId) {
+        setProfileError("Profile unavailable. Complete onboarding to manage settings.");
+        return;
+      }
+      setSettingsUpdating(true);
+      setProfileError(null);
+      try {
+        const updated = await updateProfileSettings(profile.sessionId, patch);
+        if (updated) {
+          setProfile(updated);
+          writeProfile(updated);
+          setGuestMode(false);
+        } else {
+          setProfileError("Unable to update profile settings right now. Please retry later.");
+        }
+      } catch (error) {
+        console.error(error);
+        setProfileError("Failed to update profile settings. Please retry.");
+      } finally {
+        setSettingsUpdating(false);
+      }
+    },
+    [profile]
+  );
 
   const handleDismissStatus = () => {
     actions.resetSubmission();
@@ -420,10 +480,17 @@ export function BridgeFlow() {
         ) : null}
       </header>
 
-      {state.error ? (
+      {state.error || profileError ? (
         <div className={styles.errorBanner}>
-          {state.error}
-          <button type="button" className={styles.ghostButton} onClick={actions.clearError}>
+          {state.error ?? profileError}
+          <button
+            type="button"
+            className={styles.ghostButton}
+            onClick={() => {
+              actions.clearError();
+              setProfileError(null);
+            }}
+          >
             Dismiss
           </button>
         </div>
@@ -469,14 +536,12 @@ export function BridgeFlow() {
         onLinkWallet={handleLinkWalletFromSettings}
         onRemoveWallet={handleRemoveWalletFromSettings}
         onMutateProfile={handleProfileMutation}
+        onSaveProfileSettings={handleProfileSettingsSave}
         onSignOut={handleSignOut}
-        onUpgradePlan={() => {
-          setProfileSettingsOpen(false);
-          setPricingOpen(true);
-        }}
+        onUpgradePlan={handleUpgradePlan}
         availableProviders={WALLET_OPTIONS}
         walletLogos={WALLET_LOGOS}
-        isBusy={state.isLoading}
+        isBusy={state.isLoading || planUpdating || settingsUpdating}
       />
     </div>
   );

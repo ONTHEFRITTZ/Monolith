@@ -17,6 +17,7 @@ const defaultState: OnboardingState = {
   contacts: [],
   recoveryThreshold: 2,
   passkeyEnrolled: false,
+  socialLogins: [],
   sponsorshipPlan: "starter",
   sponsorshipEstimates: {},
   termsAccepted: false,
@@ -37,7 +38,11 @@ export function useOnboardingState(initial?: Partial<OnboardingState>): {
   state: OnboardingState;
   actions: OnboardingActions;
 } {
-  const [state, setState] = useState<OnboardingState>({ ...defaultState, ...initial });
+  const [state, setState] = useState<OnboardingState>({
+    ...defaultState,
+    ...initial,
+    socialLogins: initial?.socialLogins ?? defaultState.socialLogins,
+  });
 
   const actions = useMemo<OnboardingActions>(
     () => ({
@@ -63,6 +68,7 @@ export function useOnboardingState(initial?: Partial<OnboardingState>): {
           ownerAddress,
           email,
           linkedWallets: [],
+          socialLogins: [],
         })),
       setLinkedWallets: (wallets) =>
         setState((prev) => ({
@@ -96,6 +102,16 @@ export function useOnboardingState(initial?: Partial<OnboardingState>): {
             ? { ...prev.sponsorshipEstimates, [estimate.planId]: estimate }
             : prev.sponsorshipEstimates,
           termsAccepted: typeof termsAccepted === "boolean" ? termsAccepted : prev.termsAccepted,
+        })),
+      setSocialLogins: (providers) =>
+        setState((prev) => ({
+          ...prev,
+          socialLogins: Array.from(new Set(providers)),
+        })),
+      setPreferences: (prefs) =>
+        setState((prev) => ({
+          ...prev,
+          preferences: prefs,
         })),
       setTermsAccepted: (accepted: boolean) =>
         setState((prev) => ({

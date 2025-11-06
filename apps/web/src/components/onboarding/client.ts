@@ -107,6 +107,8 @@ export async function finalizeOnboarding(payload: {
     address: string;
     chains: string[];
   }>;
+  socialLogins?: Array<"google" | "apple">;
+  preferences?: Record<string, unknown>;
 }): Promise<{
   accountAddress: string;
   paymasterPolicyId: string;
@@ -131,6 +133,8 @@ export async function finalizeOnboarding(payload: {
         recoveryThreshold: payload.recoveryThreshold,
         passkeyEnrolled: payload.passkeyEnrolled,
         linkedWallets: payload.linkedWallets,
+        socialLogins: payload.socialLogins,
+        preferences: payload.preferences,
       },
       sponsorship: {
         plan: payload.plan,
@@ -159,6 +163,8 @@ export async function getSessionStatus(sessionId: string): Promise<{
     address: string;
     chains: string[];
   }>;
+  socialLogins?: Array<"google" | "apple">;
+  preferences?: Record<string, unknown>;
 }> {
   return request(`/status/${sessionId}`, {
     method: "GET",

@@ -7,6 +7,8 @@ interface OnboardingStepIdentifyProps {
   onMetaMask: () => Promise<void>;
   onEmailSubmit: (email: string) => Promise<void>;
   onSocial: () => Promise<void>;
+  onToggleSocial: (provider: "google" | "apple") => void;
+  socialLogins: Array<"google" | "apple">;
   isProcessing: boolean;
 }
 
@@ -15,6 +17,8 @@ export function OnboardingStepIdentify({
   onMetaMask,
   onEmailSubmit,
   onSocial,
+  onToggleSocial,
+  socialLogins,
   isProcessing,
 }: OnboardingStepIdentifyProps) {
   const [email, setEmail] = useState(state.email ?? "");
@@ -75,6 +79,22 @@ export function OnboardingStepIdentify({
 
       <div className={styles.socialBlock}>
         <p>Prefer social login?</p>
+        <div className={styles.socialGrid}>
+          {(["google", "apple"] as const).map((provider) => {
+            const selected = socialLogins.includes(provider);
+            return (
+              <label key={provider} className={styles.socialOption}>
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => onToggleSocial(provider)}
+                  disabled={isProcessing}
+                />
+                <span>{provider === "google" ? "Google" : "Apple"}</span>
+              </label>
+            );
+          })}
+        </div>
         <button
           type="button"
           className={styles.ghostButton}
@@ -83,7 +103,7 @@ export function OnboardingStepIdentify({
         >
           {isProcessing && state.loginType === "social"
             ? "Preparing SSO..."
-            : "Continue with Google / Apple"}
+            : "Continue with selected providers"}
         </button>
       </div>
 

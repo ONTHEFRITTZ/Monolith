@@ -86,6 +86,14 @@ export class AccountIntentDto {
   @ValidateNested({ each: true })
   @Type(() => LinkedWalletDto)
   linkedWallets?: LinkedWalletDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(['google', 'apple'], { each: true })
+  socialLogins?: Array<'google' | 'apple'>;
+
+  @IsOptional()
+  preferences?: Record<string, unknown>;
 }
 
 export class SponsorshipDto {

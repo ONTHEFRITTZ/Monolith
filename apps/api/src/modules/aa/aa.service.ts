@@ -5,7 +5,7 @@ import {
   defineAlchemyChain,
 } from '@alchemy/aa-alchemy';
 import { LocalAccountSigner } from '@alchemy/aa-core';
-import { Account, Prisma } from '@prisma/client';
+import type { Account, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import type { Hex } from 'viem';
 import { arbitrumSepolia, sepolia } from 'viem/chains';
@@ -28,6 +28,11 @@ import {
   StatusResponseDto,
 } from './dto/session.dto';
 import { SponsorshipEstimateResponseDto } from './dto/sponsorship.dto';
+import {
+  ProfileResponseDto,
+  UpdatePlanRequestDto,
+  UpdateProfileSettingsRequestDto,
+} from './dto/profile.dto';
 
 const sponsorshipPlans: Record<
   SponsorshipPlan,
@@ -61,6 +66,14 @@ const SUPPORTED_LOGIN_CHAIN: Record<LoginType, 'ethereum' | 'arbitrum'> = {
   [LoginType.EMAIL]: 'ethereum',
   [LoginType.SOCIAL]: 'arbitrum',
 };
+
+type SocialProvider = 'google' | 'apple';
+
+interface SessionProfileMetadata {
+  version?: string;
+  socialLogins?: SocialProvider[];
+  preferences?: Record<string, unknown>;
+}
 
 @Injectable()
 export class AaService {
@@ -141,6 +154,102 @@ export class AaService {
     return sponsorshipPlans[plan];
   }
 
+  async getProfile(sessionId: string): Promise<ProfileResponseDto> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    const plan =
+      session.sponsorshipPlan &&
+      Object.values(SponsorshipPlan).includes(
+        session.sponsorshipPlan as SponsorshipPlan,
+      )
+        ? (session.sponsorshipPlan as SponsorshipPlan)
+        : SponsorshipPlan.STARTER;
+    const metadata = decodeSponsorshipMetadata(session.sponsorshipTerms);
+
+    return {
+      sessionId,
+      smartAccountAddress: session.smartAccountAddress,
+      ownerAddress: session.ownerAddress,
+      loginType: session.loginType as LoginType,
+      email: session.email ?? undefined,
+      linkedWallets: mapLinkedWallets(session.linkedWallets),
+      sponsorshipPlan: plan,
+      sponsorship: sponsorshipPlans[plan],
+      paymasterPolicyId: session.paymasterPolicyId ?? undefined,
+      sponsorshipTermsVersion:
+        metadata.version ?? session.sponsorshipTerms ?? undefined,
+      socialLogins: metadata.socialLogins,
+      preferences: metadata.preferences,
+    };
+  }
+
+  async updateSponsorshipPlan(
+    sessionId: string,
+    payload: UpdatePlanRequestDto,
+  ): Promise<ProfileResponseDto> {
+    await this.prisma.session.update({
+      where: { sessionId },
+      data: { sponsorshipPlan: payload.plan },
+    });
+
+    return this.getProfile(sessionId);
+  }
+
+  async updateProfileSettings(
+    sessionId: string,
+    payload: UpdateProfileSettingsRequestDto,
+  ): Promise<ProfileResponseDto> {
+    const session = await this.prisma.session.findUnique({
+      where: { sessionId },
+      select: {
+        sponsorshipTerms: true,
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    const existingMeta = decodeSponsorshipMetadata(session.sponsorshipTerms);
+
+    const mergedSocials =
+      payload.socialLogins !== undefined
+        ? normaliseSocialLogins(payload.socialLogins)
+        : existingMeta.socialLogins;
+    const mergedPreferences =
+      payload.preferences !== undefined
+        ? normalisePreferences(payload.preferences)
+        : existingMeta.preferences;
+
+    const baseVersion =
+      existingMeta.version ??
+      (session.sponsorshipTerms &&
+      !session.sponsorshipTerms.trim().startsWith('{')
+        ? session.sponsorshipTerms.trim()
+        : undefined);
+
+    const encoded = encodeSponsorshipMetadata(
+      baseVersion,
+      mergedSocials,
+      mergedPreferences,
+    );
+
+    await this.prisma.session.update({
+      where: { sessionId },
+      data: {
+        sponsorshipTerms: encoded ?? null,
+      },
+    });
+
+    return this.getProfile(sessionId);
+  }
+
   async onboard(payload: OnboardRequestDto): Promise<OnboardResponseDto> {
     const session = await this.prisma.session.findUnique({
       where: { sessionId: payload.sessionId },
@@ -153,6 +262,11 @@ export class AaService {
     const accountIntent = payload.accountIntent;
     const sponsorship = payload.sponsorship;
     const linkedWallets = accountIntent.linkedWallets ?? [];
+    const sponsorshipTerms = encodeSponsorshipMetadata(
+      sponsorship.acceptedTermsVersion,
+      accountIntent.socialLogins,
+      accountIntent.preferences,
+    );
     const linkedWalletsJson = linkedWallets.map((wallet) => ({
       provider: wallet.provider,
       address: wallet.address,
@@ -175,7 +289,7 @@ export class AaService {
         recoveryThreshold: accountIntent.recoveryThreshold,
         passkeyEnrolled: accountIntent.passkeyEnrolled,
         sponsorshipPlan: sponsorship.plan,
-        sponsorshipTerms: sponsorship.acceptedTermsVersion,
+        sponsorshipTerms: sponsorshipTerms ?? sponsorship.acceptedTermsVersion,
         linkedWallets: linkedWalletsJson,
       },
     });
@@ -205,6 +319,8 @@ export class AaService {
       throw new NotFoundException(`Session ${sessionId} not found`);
     }
 
+    const metadata = decodeSponsorshipMetadata(session.sponsorshipTerms);
+
     return {
       sessionId,
       status: session.status as StatusResponseDto['status'],
@@ -217,7 +333,10 @@ export class AaService {
       sponsorshipPlan: session.sponsorshipPlan
         ? (session.sponsorshipPlan as SponsorshipPlan)
         : undefined,
-      sponsorshipTermsVersion: session.sponsorshipTerms ?? undefined,
+      sponsorshipTermsVersion:
+        metadata.version ?? session.sponsorshipTerms ?? undefined,
+      socialLogins: metadata.socialLogins,
+      preferences: metadata.preferences,
     };
   }
 
@@ -299,6 +418,118 @@ export class AaService {
       },
     });
   }
+}
+
+function encodeSponsorshipMetadata(
+  version?: string,
+  socialLogins?: Array<'google' | 'apple'>,
+  preferences?: Record<string, unknown>,
+): string | undefined {
+  const trimmedVersion = version?.trim();
+  const normalisedSocials = normaliseSocialLogins(socialLogins);
+  const normalisedPreferences = normalisePreferences(preferences);
+
+  if (!trimmedVersion && !normalisedSocials && !normalisedPreferences) {
+    return undefined;
+  }
+
+  if (!normalisedSocials && !normalisedPreferences) {
+    return trimmedVersion;
+  }
+
+  const payload: SessionProfileMetadata = {};
+
+  if (trimmedVersion) {
+    payload.version = trimmedVersion;
+  }
+
+  if (normalisedSocials) {
+    payload.socialLogins = normalisedSocials;
+  }
+
+  if (normalisedPreferences) {
+    payload.preferences = normalisedPreferences;
+  }
+
+  return JSON.stringify(payload);
+}
+
+function decodeSponsorshipMetadata(
+  raw: string | null | undefined,
+): SessionProfileMetadata {
+  if (!raw) {
+    return {};
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const metadata: SessionProfileMetadata = {};
+      const version =
+        typeof parsed.version === 'string' ? parsed.version : undefined;
+      const socialLogins = normaliseSocialLogins(parsed.socialLogins);
+      const preferences = normalisePreferences(parsed.preferences);
+
+      if (version) {
+        metadata.version = version;
+      }
+
+      if (socialLogins) {
+        metadata.socialLogins = socialLogins;
+      }
+
+      if (preferences) {
+        metadata.preferences = preferences;
+      }
+
+      return metadata;
+    } catch {
+      return { version: trimmed };
+    }
+  }
+
+  return { version: trimmed };
+}
+
+function normaliseSocialLogins(value: unknown): SocialProvider[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const allowed: SocialProvider[] = ['google', 'apple'];
+  const unique = Array.from(
+    new Set(
+      value.filter((entry): entry is SocialProvider => {
+        return (
+          typeof entry === 'string' && allowed.includes(entry as SocialProvider)
+        );
+      }),
+    ),
+  );
+  return unique.length > 0 ? unique : undefined;
+}
+
+function normalisePreferences(
+  value: unknown,
+): Record<string, boolean> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const resultEntries = Object.entries(value as Record<string, unknown>).filter(
+    ([, preferenceValue]) => typeof preferenceValue === 'boolean',
+  );
+
+  if (resultEntries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(resultEntries) as Record<string, boolean>;
 }
 
 function mapLinkedWallets(

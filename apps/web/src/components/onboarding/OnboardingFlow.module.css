@@ -240,6 +240,29 @@
   flex-direction: column;
   gap: 12px;
 }
+.socialGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.socialOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(24, 12, 40, 0.55);
+  border: 1px solid rgba(210, 145, 255, 0.2);
+  color: #f5f7fa;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.socialOption input {
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(200, 152, 255, 0.85);
+}
 
 .noteList {
   color: rgba(226, 220, 255, 0.65);

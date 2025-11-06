@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import type { SupportedChain, SupportedToken } from './types/bridge.types';
 import { TOKEN_REGISTRY, TokenDescriptor } from './token.registry';
 
+const ALCHEMY_CHAIN_IDS: Record<SupportedChain, string | null> = {
+  ethereum: 'eth-mainnet',
+  arbitrum: 'arb-mainnet',
+  solana: 'sol-mainnet',
+  monad: null,
+};
+
 const MON_PRICE_CACHE_TTL_MS = 30_000;
 
 export interface QuoteResult {
@@ -69,22 +76,33 @@ export class QuoteService {
       }
     }
 
-    const appId = this.config.get<string>('ALCHEMY_APP_ID');
-    if (!meta.contractAddress || !appId) {
+    const apiBase = this.config.get<string>('ALCHEMY_TOKEN_API_BASE');
+    const apiKey = this.config.get<string>('ALCHEMY_TOKEN_API_KEY');
+    const chainId = ALCHEMY_CHAIN_IDS[chain];
+
+    if (
+      !meta.contractAddress ||
+      !apiBase ||
+      !apiKey ||
+      !chainId ||
+      chainId.length === 0
+    ) {
       return meta.fallbackUsdPrice;
     }
 
     try {
-      const baseUrl = `https://api.g.alchemy.com/prices/v1/${appId}`;
-      const url = `${baseUrl}/tokens/${chain}:${meta.contractAddress}`;
-      const response = await fetch(url);
+      const url = `${apiBase.replace(/\/$/, '')}/${chainId}/tokens/${meta.contractAddress}/price`;
+      const response = await fetch(url, {
+        headers: { 'X-Alchemy-Token': apiKey },
+      });
       if (!response.ok) {
-        throw new Error(`Alchemy prices API returned ${response.status}`);
+        throw new Error(`Token API returned ${response.status}`);
       }
       const data = (await response.json()) as {
+        price?: { usd?: number };
         data?: { price?: { usd?: number } };
       };
-      const usd = data?.data?.price?.usd;
+      const usd = data.price?.usd ?? data.data?.price?.usd;
       if (!usd) {
         throw new Error('Price missing in response');
       }

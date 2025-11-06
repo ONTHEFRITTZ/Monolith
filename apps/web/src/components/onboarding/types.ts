@@ -36,6 +36,8 @@ export interface OnboardingState {
   contacts: RecoveryContact[];
   recoveryThreshold: number;
   passkeyEnrolled: boolean;
+  socialLogins: Array<"google" | "apple">;
+  preferences?: Record<string, unknown>;
   sponsorshipPlan: SponsorshipPlanId;
   sponsorshipEstimates: Partial<Record<SponsorshipPlanId, SponsorshipEstimate>>;
   termsAccepted: boolean;
@@ -68,6 +70,8 @@ export interface OnboardingActions {
     estimate?: SponsorshipEstimate;
     termsAccepted?: boolean;
   }) => void;
+  setSocialLogins: (providers: Array<"google" | "apple">) => void;
+  setPreferences: (prefs?: Record<string, unknown>) => void;
   setTermsAccepted: (accepted: boolean) => void;
   setProcessing: (value: boolean) => void;
   setError: (message?: string) => void;

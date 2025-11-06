@@ -41,6 +41,16 @@ export function OnboardingStepReview({
               <dt>Linked wallets</dt>
               <dd>{formatLinkedWallets(state)}</dd>
             </div>
+            <div>
+              <dt>Social logins</dt>
+              <dd>
+                {state.socialLogins.length > 0
+                  ? state.socialLogins
+                      .map((provider) => (provider === "google" ? "Google" : "Apple"))
+                      .join(", ")
+                  : "None added"}
+              </dd>
+            </div>
           </dl>
         </div>
 

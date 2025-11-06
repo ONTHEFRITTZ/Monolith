@@ -2,7 +2,12 @@ import Image from "next/image";
 import styles from "./BridgeFlow.module.css";
 import type { WalletProvider } from "./types";
 import { providerLabel } from "./bridgeClient";
-import type { SocialProvider, StoredProfile, ProfilePreferences } from "@/lib/profile";
+import type {
+  SocialProvider,
+  StoredProfile,
+  ProfilePreferences,
+  ProfileSettingsPatch,
+} from "@/lib/profile";
 import type { LinkedWallet } from "../onboarding/types";
 
 interface PreferenceToggle {
@@ -99,6 +104,7 @@ interface ProfileSettingsModalProps {
   onLinkWallet: (provider: WalletProvider) => Promise<void> | void;
   onRemoveWallet: (provider: WalletProvider) => Promise<void> | void;
   onMutateProfile: (mutator: (current: StoredProfile) => StoredProfile) => void;
+  onSaveProfileSettings: (patch: ProfileSettingsPatch) => Promise<void> | void;
   onSignOut: () => Promise<void> | void;
   onUpgradePlan: () => void;
   availableProviders: WalletProvider[];
@@ -113,6 +119,7 @@ export function ProfileSettingsModal({
   onLinkWallet,
   onRemoveWallet,
   onMutateProfile,
+  onSaveProfileSettings,
   onSignOut,
   onUpgradePlan,
   availableProviders,
@@ -130,33 +137,25 @@ export function ProfileSettingsModal({
   const preferences: ProfilePreferences = profile?.preferences ?? {};
 
   const handlePreferenceToggle = (toggle: PreferenceToggle) => {
-    if (!profile) return;
-    onMutateProfile((current) => {
-      const nextPreferences: ProfilePreferences = {
-        ...(current.preferences ?? {}),
-        [toggle.key]: !(current.preferences?.[toggle.key] ?? false),
-      };
-      return {
-        ...current,
-        preferences: nextPreferences,
-      };
-    });
+    if (!profile || isBusy) return;
+    const currentPreferences = profile.preferences ?? {};
+    const nextValue = !(currentPreferences[toggle.key] ?? false);
+    const nextPreferences: ProfilePreferences = {
+      ...currentPreferences,
+      [toggle.key]: nextValue,
+    };
+    void onSaveProfileSettings({ preferences: nextPreferences });
   };
 
   const handleSocialToggle = (provider: SocialProvider) => {
-    if (!profile) return;
-    onMutateProfile((current) => {
-      const existing = new Set<SocialProvider>(current.socialLogins ?? []);
-      if (existing.has(provider)) {
-        existing.delete(provider);
-      } else {
-        existing.add(provider);
-      }
-      return {
-        ...current,
-        socialLogins: Array.from(existing),
-      };
-    });
+    if (!profile || isBusy) return;
+    const existing = new Set<SocialProvider>(profile.socialLogins ?? []);
+    if (existing.has(provider)) {
+      existing.delete(provider);
+    } else {
+      existing.add(provider);
+    }
+    void onSaveProfileSettings({ socialLogins: Array.from(existing) });
   };
 
   const handleWalletRemoval = async (provider: WalletProvider) => {

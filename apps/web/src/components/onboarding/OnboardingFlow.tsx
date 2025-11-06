@@ -48,6 +48,8 @@ interface StoredOnboardingSession {
   paymasterPolicyId?: string;
   updatedAt: number;
   sponsorshipPlan?: SponsorshipPlanId;
+  socialLogins?: Array<"google" | "apple">;
+  preferences?: Record<string, unknown>;
 }
 
 export function OnboardingFlow() {
@@ -90,6 +92,7 @@ export function OnboardingFlow() {
           email,
           status: "pending",
           linkedWallets: [],
+          socialLogins: [],
         });
         actions.advance();
       } catch (error) {
@@ -101,6 +104,21 @@ export function OnboardingFlow() {
       }
     },
     [actions, handleError]
+  );
+
+  const handleToggleSocial = useCallback(
+    (provider: "google" | "apple") => {
+      const next = state.socialLogins.includes(provider)
+        ? state.socialLogins.filter((value) => value !== provider)
+        : [...state.socialLogins, provider];
+      actions.setSocialLogins(next);
+      if (state.sessionId) {
+        persistSession(state.sessionId, {
+          socialLogins: next,
+        });
+      }
+    },
+    [actions, state.sessionId, state.socialLogins]
   );
 
   const handleSaveRecovery = useCallback(
@@ -195,6 +213,7 @@ export function OnboardingFlow() {
         persistSession(state.sessionId, {
           linkedWallets: deduped,
           sponsorshipPlan: state.sponsorshipPlan,
+          socialLogins: state.socialLogins,
         });
       } catch (error) {
         actions.setError("Unable to link wallet. Please try again.");
@@ -203,7 +222,7 @@ export function OnboardingFlow() {
         setLinkingProvider(null);
       }
     },
-    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan]
+    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan, state.socialLogins]
   );
 
   const handleRemoveWallet = useCallback(
@@ -219,9 +238,10 @@ export function OnboardingFlow() {
       persistSession(state.sessionId, {
         linkedWallets: next,
         sponsorshipPlan: state.sponsorshipPlan,
+        socialLogins: state.socialLogins,
       });
     },
-    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan]
+    [actions, state.linkedWallets, state.sessionId, state.sponsorshipPlan, state.socialLogins]
   );
 
   const handleReviewSubmit = useCallback(async () => {
@@ -248,6 +268,8 @@ export function OnboardingFlow() {
           address: wallet.address,
           chains: wallet.chains,
         })),
+        socialLogins: state.socialLogins,
+        preferences: state.preferences,
       });
 
       if (response.status !== "completed") {
@@ -264,6 +286,7 @@ export function OnboardingFlow() {
         paymasterPolicyId: response.paymasterPolicyId,
         linkedWallets: state.linkedWallets,
         sponsorshipPlan: state.sponsorshipPlan,
+        socialLogins: state.socialLogins,
       });
       void fetchProfileFromServer(state.sessionId);
 
@@ -277,6 +300,8 @@ export function OnboardingFlow() {
         paymasterPolicyId: response.paymasterPolicyId,
         linkedWallets: state.linkedWallets,
         sponsorshipPlan: state.sponsorshipPlan,
+        socialLogins: state.socialLogins,
+        preferences: state.preferences,
       });
     } catch (error) {
       handleError("Onboarding failed at review stage. Try again or contact support.");
@@ -297,6 +322,8 @@ export function OnboardingFlow() {
     state.recoveryThreshold,
     state.sessionId,
     state.sponsorshipPlan,
+    state.socialLogins,
+    state.preferences,
   ]);
 
   const handleReset = useCallback(() => {
@@ -318,6 +345,7 @@ export function OnboardingFlow() {
     }
 
     const resume = async () => {
+      const storedSocialLogins = stored.socialLogins ?? [];
       try {
         actions.setIdentify({
           sessionId: stored.sessionId,
@@ -325,6 +353,7 @@ export function OnboardingFlow() {
           ownerAddress: stored.ownerAddress,
           email: stored.email,
         });
+        actions.setSocialLogins(storedSocialLogins);
         if (stored.linkedWallets?.length) {
           actions.setLinkedWallets(stored.linkedWallets);
         }
@@ -348,6 +377,7 @@ export function OnboardingFlow() {
               paymasterPolicyId: stored.paymasterPolicyId,
               linkedWallets: storedWallets,
               sponsorshipPlan: stored.sponsorshipPlan ?? state.sponsorshipPlan,
+              socialLogins: storedSocialLogins,
             });
             void fetchProfileFromServer(stored.sessionId);
           }
@@ -375,6 +405,7 @@ export function OnboardingFlow() {
           linkedWallets: nextWallets,
           accountAddress: status.smartAccountAddress ?? stored.accountAddress,
           paymasterPolicyId: status.paymasterPolicyId ?? stored.paymasterPolicyId,
+          socialLogins: storedSocialLogins,
         });
 
         if (status.status === "completed") {
@@ -393,6 +424,7 @@ export function OnboardingFlow() {
               paymasterPolicyId: status.paymasterPolicyId ?? stored.paymasterPolicyId,
               linkedWallets: nextWallets,
               sponsorshipPlan: stored.sponsorshipPlan ?? state.sponsorshipPlan,
+              socialLogins: storedSocialLogins,
             });
             void fetchProfileFromServer(stored.sessionId);
           }
@@ -435,6 +467,8 @@ export function OnboardingFlow() {
             onMetaMask={() => handleSessionStart({ loginType: "metamask" })}
             onEmailSubmit={(email) => handleSessionStart({ loginType: "email", email })}
             onSocial={() => handleSessionStart({ loginType: "social" })}
+            onToggleSocial={handleToggleSocial}
+            socialLogins={state.socialLogins}
             isProcessing={stepBusy}
           />
         );
@@ -574,6 +608,8 @@ function persistSession(
           paymasterPolicyId: patch.paymasterPolicyId,
           updatedAt: Date.now(),
           sponsorshipPlan: patch.sponsorshipPlan ?? "starter",
+          socialLogins: patch.socialLogins ?? [],
+          preferences: patch.preferences,
         };
 
   const merged: StoredOnboardingSession = {
@@ -589,6 +625,8 @@ function persistSession(
     accountAddress: patch.accountAddress ?? base.accountAddress,
     paymasterPolicyId: patch.paymasterPolicyId ?? base.paymasterPolicyId,
     sponsorshipPlan: patch.sponsorshipPlan ?? base.sponsorshipPlan,
+    socialLogins: patch.socialLogins ?? base.socialLogins ?? [],
+    preferences: patch.preferences ?? base.preferences,
     updatedAt: Date.now(),
   };
 

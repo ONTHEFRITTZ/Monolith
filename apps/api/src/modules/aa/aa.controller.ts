@@ -1,4 +1,12 @@
-﻿import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AaService } from './aa.service';
 import {
   StartSessionRequestDto,
@@ -14,6 +22,11 @@ import {
   SponsorshipEstimateRequestDto,
   SponsorshipEstimateResponseDto,
 } from './dto/sponsorship.dto';
+import {
+  ProfileResponseDto,
+  UpdatePlanRequestDto,
+  UpdateProfileSettingsRequestDto,
+} from './dto/profile.dto';
 
 @Controller('aa')
 export class AaController {
@@ -50,5 +63,28 @@ export class AaController {
     @Param('sessionId') sessionId: string,
   ): Promise<StatusResponseDto> {
     return this.aaService.getStatus(sessionId);
+  }
+
+  @Get('profile/:sessionId')
+  async getProfile(
+    @Param('sessionId') sessionId: string,
+  ): Promise<ProfileResponseDto> {
+    return this.aaService.getProfile(sessionId);
+  }
+
+  @Patch('profile/:sessionId/plan')
+  async updatePlan(
+    @Param('sessionId') sessionId: string,
+    @Body() body: UpdatePlanRequestDto,
+  ): Promise<ProfileResponseDto> {
+    return this.aaService.updateSponsorshipPlan(sessionId, body);
+  }
+
+  @Patch('profile/:sessionId/settings')
+  async updateSettings(
+    @Param('sessionId') sessionId: string,
+    @Body() body: UpdateProfileSettingsRequestDto,
+  ): Promise<ProfileResponseDto> {
+    return this.aaService.updateProfileSettings(sessionId, body);
   }
 }

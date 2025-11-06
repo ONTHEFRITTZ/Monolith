@@ -10,6 +10,13 @@ export interface ProfilePreferences {
   insightsOptIn?: boolean;
 }
 
+const PREFERENCE_KEYS: Array<keyof ProfilePreferences> = [
+  "analyticsApi",
+  "complianceAlerts",
+  "marketplaceAccess",
+  "insightsOptIn",
+];
+
 export interface StoredProfile {
   sessionId: string;
   smartAccountAddress: string;
@@ -25,6 +32,11 @@ export interface StoredProfile {
 export const PROFILE_STORAGE_KEY = "monolith:profile";
 export const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
 export const PROFILE_ACK_STORAGE_KEY = "monolith:bridge:profileAcknowledged";
+
+export type ProfileSettingsPatch = {
+  socialLogins?: SocialProvider[];
+  preferences?: ProfilePreferences;
+};
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -173,28 +185,57 @@ function normaliseLinkedWallets(
   return Array.from(seen.values());
 }
 
-async function requestProfile(path: string): Promise<Record<string, unknown> | null> {
+function normalisePreferences(value: unknown): ProfilePreferences | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const result: ProfilePreferences = {};
+  let hasValues = false;
+
+  PREFERENCE_KEYS.forEach((key) => {
+    const raw = record[key];
+    if (typeof raw === "boolean") {
+      result[key] = raw;
+      hasValues = true;
+    }
+  });
+
+  return hasValues ? result : undefined;
+}
+
+async function requestJson(
+  path: string,
+  init?: RequestInit
+): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(path, { cache: "no-store" });
+    const response = await fetch(path, {
+      cache: "no-store",
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
     if (!response.ok) {
       return null;
     }
     return (await response.json()) as Record<string, unknown>;
   } catch (error) {
-    console.error("Failed to fetch remote profile", error);
+    console.error("Failed to call profile endpoint", error);
     return null;
   }
 }
 
-export async function fetchProfileFromServer(sessionId: string): Promise<StoredProfile | null> {
-  const payload = await requestProfile(`${buildApiBase()}/status/${sessionId}`);
-  if (!payload) {
-    return null;
-  }
-
+function toStoredProfile(
+  sessionId: string,
+  payload: Record<string, unknown>
+): StoredProfile | null {
   const smartAccountAddress =
     typeof payload.smartAccountAddress === "string" ? payload.smartAccountAddress : undefined;
   const loginType = payload.loginType as LoginType | undefined;
+
   if (!smartAccountAddress || !loginType) {
     return null;
   }
@@ -207,34 +248,97 @@ export async function fetchProfileFromServer(sessionId: string): Promise<StoredP
       ? (payload.linkedWallets as Array<Record<string, unknown>>)
       : []
   );
-
-  const sponsorshipPlan =
-    ((payload.sponsorshipPlan ?? payload.plan) as SponsorshipPlanId | undefined) ?? "starter";
-
+  const sponsorship =
+    (payload.sponsorshipPlan as SponsorshipPlanId | undefined) ?? ("starter" as SponsorshipPlanId);
   const socialLogins = Array.isArray(payload.socialLogins)
     ? (payload.socialLogins as Array<SocialProvider>).filter(
         (value): value is SocialProvider => value === "google" || value === "apple"
       )
     : undefined;
+  const preferences = normalisePreferences(payload.preferences);
 
-  const profile: StoredProfile = {
+  return {
     sessionId,
     smartAccountAddress,
     ownerAddress,
     loginType,
     paymasterPolicyId,
     linkedWallets,
-    sponsorshipPlan,
+    sponsorshipPlan: sponsorship,
     socialLogins,
+    preferences,
   };
+}
 
-  writeProfile(profile);
-  if (linkedWallets.length > 0) {
-    queueAutoConnectWallets(linkedWallets);
+export async function fetchProfileFromServer(sessionId: string): Promise<StoredProfile | null> {
+  const base = buildApiBase();
+  const profilePayload = await requestJson(`${base}/profile/${sessionId}`);
+  const payload = profilePayload ?? (await requestJson(`${base}/status/${sessionId}`));
+
+  if (!payload) {
+    return null;
+  }
+
+  const stored = toStoredProfile(sessionId, payload);
+  if (!stored) {
+    return null;
+  }
+
+  writeProfile(stored);
+  if (stored.linkedWallets.length > 0) {
+    queueAutoConnectWallets(stored.linkedWallets);
   }
   markProfileAcknowledged();
 
-  return profile;
+  return stored;
+}
+
+export async function updateProfilePlan(
+  sessionId: string,
+  plan: SponsorshipPlanId
+): Promise<StoredProfile | null> {
+  const base = buildApiBase();
+  const payload = await requestJson(`${base}/profile/${sessionId}/plan`, {
+    method: "PATCH",
+    body: JSON.stringify({ plan }),
+  });
+
+  if (!payload) {
+    return null;
+  }
+
+  const stored = toStoredProfile(sessionId, payload);
+  if (!stored) {
+    return null;
+  }
+
+  writeProfile(stored);
+  markProfileAcknowledged();
+  return stored;
+}
+
+export async function updateProfileSettings(
+  sessionId: string,
+  patch: ProfileSettingsPatch
+): Promise<StoredProfile | null> {
+  const base = buildApiBase();
+  const payload = await requestJson(`${base}/profile/${sessionId}/settings`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+  if (!payload) {
+    return null;
+  }
+
+  const stored = toStoredProfile(sessionId, payload);
+  if (!stored) {
+    return null;
+  }
+
+  writeProfile(stored);
+  markProfileAcknowledged();
+  return stored;
 }
 
 export async function syncProfileWithServer(): Promise<StoredProfile | null> {

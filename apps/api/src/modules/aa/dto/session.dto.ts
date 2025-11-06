@@ -26,4 +26,6 @@ export class StatusResponseDto {
   linkedWallets?: LinkedWalletDto[];
   sponsorshipPlan?: SponsorshipPlan;
   sponsorshipTermsVersion?: string;
+  socialLogins?: Array<'google' | 'apple'>;
+  preferences?: Record<string, unknown>;
 }
