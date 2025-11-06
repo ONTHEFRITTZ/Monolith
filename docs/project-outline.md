@@ -1,4 +1,4 @@
-# Mon-olith Project Outline
+# Monolith Project Outline
 
 ## 1. Vision & Value Proposition
 

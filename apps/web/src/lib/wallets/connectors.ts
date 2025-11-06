@@ -18,7 +18,7 @@ const metamaskSdk =
   typeof window !== "undefined"
     ? new MetaMaskSDK({
         dappMetadata: {
-          name: "Mon-olith Bridge",
+          name: "Monolith Bridge",
         },
         logging: {
           developerMode: false,

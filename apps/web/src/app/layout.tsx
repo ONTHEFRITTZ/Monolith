@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mon-olith Bridge",
+  title: "Monolith Bridge",
   description:
     "Low-fee USDC <-> MON bridge on Monad with smart-account onboarding and quick off-ramps.",
 };

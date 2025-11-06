@@ -28,7 +28,7 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     });
   } catch (error) {
     throw new Error(
-      `Unable to reach Mon-olith API at ${API_ROOT}${path}. Verify the backend dev server is running and NEXT_PUBLIC_API_BASE_URL is set.`,
+      `Unable to reach Monolith API at ${API_ROOT}${path}. Verify the backend dev server is running and NEXT_PUBLIC_API_BASE_URL is set.`,
       { cause: error as Error }
     );
   }

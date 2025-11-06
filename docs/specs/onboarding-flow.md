@@ -19,7 +19,7 @@
    - Enroll optional passkey for passwordless login.
    - Capture risk flags for compliance (e.g., jurisdiction).
 4. **Step 3 · Gas & Funding**
-   - Choose sponsorship plan: “Mon-olith covers gas” vs “Bring your own”.
+   - Choose sponsorship plan: “Monolith covers gas” vs “Bring your own”.
    - Paymaster API estimates sponsorship usage; request signature if BYO.
 5. **Step 4 · Review & Create**
    - Display summary (account address, recovery setup, sponsorship).
@@ -72,7 +72,7 @@ stateDiagram-v2
     "loginType": "metamask" | "email" | "social",
     "recovery": {
       "contacts": [
-        {"type": "email", "value": "ops@mon-olith.com"}
+        {"type": "email", "value": "ops@Monolith.com"}
       ],
       "threshold": 2
     },

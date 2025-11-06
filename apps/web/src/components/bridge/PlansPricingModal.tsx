@@ -10,7 +10,7 @@ const TIERS = [
     badge: "Recommended",
     services: [
       "Alchemy smart account onboarding",
-      "Mon-olith paymaster coverage up to cap",
+      "Monolith paymaster coverage up to cap",
       "Standard bridge routing (6–12 bps)",
       "Email support & incident recovery",
     ],
@@ -62,7 +62,7 @@ export function PlansPricingModal({ open, onClose }: PlansPricingModalProps) {
           <div>
             <h2 className={styles.modalTitle}>Plans &amp; pricing</h2>
             <p className={styles.modalSubtitle}>
-              Sponsorship tiers align with how deeply you need Mon-olith to cover gas, routing, and
+              Sponsorship tiers align with how deeply you need Monolith to cover gas, routing, and
               automation. Start free, graduate to Pro when you’re ready for higher throughput.
             </p>
           </div>

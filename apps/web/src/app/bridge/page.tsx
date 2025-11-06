@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BridgeFlow } from "@/components/bridge/BridgeFlow";
 
 export const metadata: Metadata = {
-  title: "Mon-olith · Bridge",
+  title: "Monolith · Bridge",
   description: "Move USDC and MON between Ethereum, Arbitrum, Solana, and Monad.",
 };
 

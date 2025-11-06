@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createModularAccountAlchemyClient,
@@ -35,7 +35,7 @@ const sponsorshipPlans: Record<
     plan: SponsorshipPlan.STARTER,
     monthlyAllowance: 50,
     currency: 'USD',
-    note: 'Mon-olith covers up to $50 of gas each month for bridge intents.',
+    note: 'Monolith covers up to $50 of gas each month for bridge intents.',
     recommended: true,
   },
   [SponsorshipPlan.PRO]: {
@@ -49,7 +49,7 @@ const sponsorshipPlans: Record<
     plan: SponsorshipPlan.SELF,
     monthlyAllowance: 0,
     currency: 'USD',
-    note: 'Bring your own gas. Mon-olith intervenes only for stuck transactions.',
+    note: 'Bring your own gas. Monolith intervenes only for stuck transactions.',
     recommended: false,
   },
 };
@@ -222,7 +222,8 @@ export class AaService {
     const client = await createModularAccountAlchemyClient({
       apiKey,
       chain,
-      owners: [owner],
+      signer: owner,
+      owners: [ownerAddress],
       gasManagerConfig: policyId ? { policyId } : undefined,
     });
 

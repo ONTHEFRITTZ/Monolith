@@ -144,7 +144,7 @@ export function BridgeFlow() {
       <div className={styles.brandMark}>
         <Image
           src="/logos/monolith-bridge.png"
-          alt="Mon-olith Bridge"
+          alt="Monolith Bridge"
           width={140}
           height={140}
           priority

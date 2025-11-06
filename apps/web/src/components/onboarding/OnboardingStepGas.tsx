@@ -17,7 +17,7 @@ const PLAN_COPY: Record<
 > = {
   starter: {
     title: "Starter (Sponsored)",
-    description: "Mon-olith pays gas for up to $50 in monthly intents. Ideal for new accounts.",
+    description: "Monolith pays gas for up to $50 in monthly intents. Ideal for new accounts.",
     highlight: "Covers most retail flow. Upgrade when you exceed the free tier.",
     badge: "Recommended",
   },

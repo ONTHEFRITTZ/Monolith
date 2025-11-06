@@ -124,7 +124,7 @@ export function defaultSponsorshipEstimate(plan: SponsorshipPlanId): Sponsorship
       planId: "starter",
       monthlyAllowance: 50,
       currency: "USD",
-      note: "Mon-olith covers up to $50 in gas fees per month for your intents.",
+      note: "Monolith covers up to $50 in gas fees per month for your intents.",
       recommended: true,
     };
   }

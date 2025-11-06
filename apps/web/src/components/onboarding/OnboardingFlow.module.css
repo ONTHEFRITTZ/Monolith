@@ -18,7 +18,7 @@
     linear-gradient(190deg, rgba(10, 4, 20, 0.78), rgba(8, 3, 16, 0.9)),
     radial-gradient(circle at 20% 12%, rgba(255, 90, 188, 0.22), transparent 58%),
     radial-gradient(circle at 85% 85%, rgba(96, 70, 255, 0.24), transparent 60%),
-    url("/backgrounds/Mon-olith.png") center/cover no-repeat;
+    url("/backgrounds/Monolith.png") center/cover no-repeat;
   filter: blur(2px);
   transform: scale(1.02);
   z-index: 0;

@@ -1,4 +1,4 @@
-# Mon-olith
+# Monolith
 
 Low-cost USDC <-> MON bridge for the Monad ecosystem with smart-account onboarding and mobile-first UX.
 

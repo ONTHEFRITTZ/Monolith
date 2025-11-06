@@ -23,6 +23,7 @@ import {
   SupportedChain,
   SupportedToken,
   WalletProvider,
+  WalletProviderValues,
 } from './types/bridge.types';
 
 interface BaseIntentConfig {

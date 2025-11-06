@@ -2,7 +2,7 @@
 
 ## Overview
 
-Mon-olith needs to ingest intents from multiple USDC supported chains (Ethereum, Arbitrum, Solana, etc.), optionally extend to other stablecoins (USDT, DAI), and always settle to MON on Monad. The platform also has to support smart-account onboarding metadata, gas sponsorship, and compliance review. This document captures the initial relational model and event hooks that will evolve into production services.
+Monolith needs to ingest intents from multiple USDC supported chains (Ethereum, Arbitrum, Solana, etc.), optionally extend to other stablecoins (USDT, DAI), and always settle to MON on Monad. The platform also has to support smart-account onboarding metadata, gas sponsorship, and compliance review. This document captures the initial relational model and event hooks that will evolve into production services.
 
 ## Core Entities
 
@@ -24,7 +24,7 @@ Mon-olith needs to ingest intents from multiple USDC supported chains (Ethereum,
 
 ### 3. Liquidity & Pricing
 
-- `liquidity_positions`: Mon-olith owned pools across supported networks.
+- `liquidity_positions`: Monolith owned pools across supported networks.
 - `price_feeds`: cached oracle data (Pyth, Switchboard, Chainlink) with freshness.
 - `fx_rates`: fiat conversions (USD, EUR) for compliance reporting.
 

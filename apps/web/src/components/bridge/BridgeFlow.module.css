@@ -5,7 +5,7 @@
     linear-gradient(190deg, rgba(10, 4, 20, 0.4), rgba(8, 3, 16, 0.7)),
     radial-gradient(circle at 20% 12%, rgba(255, 90, 188, 0.24), transparent 58%),
     radial-gradient(circle at 85% 85%, rgba(96, 70, 255, 0.26), transparent 60%),
-    url("/backgrounds/Mon-olith.png") center/cover no-repeat,
+    url("/backgrounds/Monolith.png") center/cover no-repeat,
     #07020f;
   display: flex;
   flex-direction: column;
@@ -494,6 +494,7 @@
 
   .brandMark img {
     width: 100px;
+    height: auto;
   }
 }
 
@@ -576,9 +577,10 @@
 }
 
 .modalPanel {
-  width: min(640px, 100%);
+  width: min(880px, 100%);
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   background: rgba(14, 6, 28, 0.9);
   border: 1px solid rgba(210, 145, 255, 0.28);
   border-radius: 24px;
