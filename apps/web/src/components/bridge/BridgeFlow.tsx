@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./BridgeFlow.module.css";
@@ -13,6 +14,7 @@ import { providerLabel } from "./bridgeClient";
 import { PlansPricingModal } from "./PlansPricingModal";
 import { ProfilePromptModal } from "./ProfilePromptModal";
 import { ProfileSettingsModal } from "./ProfileSettingsModal";
+import { PremiumConsoleModal } from "./PremiumConsoleModal";
 import type { LinkedWallet } from "../onboarding/types";
 import type { StoredProfile } from "@/lib/profile";
 import {
@@ -52,6 +54,7 @@ export function BridgeFlow() {
   const [planUpdating, setPlanUpdating] = useState(false);
   const [settingsUpdating, setSettingsUpdating] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [premiumOpen, setPremiumOpen] = useState(false);
   const sessionId = profile?.sessionId;
   const { state, actions } = useBridgeState(sessionId);
 
@@ -437,6 +440,13 @@ export function BridgeFlow() {
               priority
             />
           </div>
+          <button
+            type="button"
+            className={styles.consoleButton}
+            onClick={() => router.push("/ramp")}
+          >
+            On / Off ramp
+          </button>
         </div>
         <div className={styles.headerRight}>
           {connectedCount > 0 ? (
@@ -513,6 +523,15 @@ export function BridgeFlow() {
                 ))}
               </ul>
             </div>
+          ) : null}
+          {!guestMode ? (
+            <button
+              type="button"
+              className={styles.consoleButton}
+              onClick={() => setPremiumOpen(true)}
+            >
+              Console
+            </button>
           ) : null}
           {guestMode ? (
             <button
@@ -600,6 +619,9 @@ export function BridgeFlow() {
       >
         Plans &amp; pricing
       </button>
+      <Link href="/ramp" className={styles.rampFloatingButton}>
+        On / Off ramp
+      </Link>
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}
@@ -619,6 +641,13 @@ export function BridgeFlow() {
         availableProviders={availableProviders}
         walletLogos={WALLET_LOGOS}
         isBusy={state.isLoading || planUpdating || settingsUpdating}
+      />
+      <PremiumConsoleModal
+        open={premiumOpen}
+        profile={profile}
+        onClose={() => setPremiumOpen(false)}
+        onSave={handleProfileSettingsSave}
+        isBusy={state.isLoading || settingsUpdating}
       />
     </div>
   );

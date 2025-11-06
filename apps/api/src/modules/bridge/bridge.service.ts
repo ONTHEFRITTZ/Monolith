@@ -22,6 +22,7 @@ import {
 } from './dto/balances.dto';
 import { QuoteResult, QuoteService } from './quote.service';
 import { TOKEN_REGISTRY, TokenDescriptor } from './token.registry';
+import { CctpService } from './cctp.service';
 import {
   BalanceIntent,
   BridgeIntentStatus,
@@ -68,31 +69,31 @@ const PROVIDER_INTENT_CATALOG: Record<
 > = {
   metamask: [
     {
-      id: 'eth_usdc_mon',
+      id: 'eth_usdc_monad',
       sourceChain: 'ethereum',
       sourceToken: 'usdc',
       destinationChain: 'monad',
-      destinationToken: 'mon',
+      destinationToken: 'usdc',
       availableAmount: 1250.52,
       usdValue: 1250.52,
       feeBps: 12,
       etaMinutes: 7,
     },
     {
-      id: 'arb_usdc_mon',
+      id: 'arb_usdc_monad',
       sourceChain: 'arbitrum',
       sourceToken: 'usdc',
       destinationChain: 'monad',
-      destinationToken: 'mon',
+      destinationToken: 'usdc',
       availableAmount: 483.1,
       usdValue: 483.1,
       feeBps: 8,
       etaMinutes: 4,
     },
     {
-      id: 'mon_mon_usdc_eth',
+      id: 'monad_usdc_eth',
       sourceChain: 'monad',
-      sourceToken: 'mon',
+      sourceToken: 'usdc',
       destinationChain: 'ethereum',
       destinationToken: 'usdc',
       availableAmount: 1500,
@@ -103,20 +104,20 @@ const PROVIDER_INTENT_CATALOG: Record<
   ],
   phantom: [
     {
-      id: 'sol_usdc_mon',
+      id: 'sol_usdc_monad',
       sourceChain: 'solana',
       sourceToken: 'usdc',
       destinationChain: 'monad',
-      destinationToken: 'mon',
+      destinationToken: 'usdc',
       availableAmount: 920.75,
       usdValue: 920.75,
       feeBps: 15,
       etaMinutes: 6,
     },
     {
-      id: 'mon_mon_usdc_sol',
+      id: 'monad_usdc_sol',
       sourceChain: 'monad',
-      sourceToken: 'mon',
+      sourceToken: 'usdc',
       destinationChain: 'solana',
       destinationToken: 'usdc',
       availableAmount: 640,
@@ -127,20 +128,20 @@ const PROVIDER_INTENT_CATALOG: Record<
   ],
   backpack: [
     {
-      id: 'sol_usdc_mon_backpack',
+      id: 'sol_usdc_monad_backpack',
       sourceChain: 'solana',
       sourceToken: 'usdc',
       destinationChain: 'monad',
-      destinationToken: 'mon',
+      destinationToken: 'usdc',
       availableAmount: 412.34,
       usdValue: 412.34,
       feeBps: 14,
       etaMinutes: 5,
     },
     {
-      id: 'mon_mon_usdc_sol_backpack',
+      id: 'monad_usdc_sol_backpack',
       sourceChain: 'monad',
-      sourceToken: 'mon',
+      sourceToken: 'usdc',
       destinationChain: 'solana',
       destinationToken: 'usdc',
       availableAmount: 860.12,
@@ -198,6 +199,7 @@ export class BridgeService {
     private readonly quoteService: QuoteService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly cctpService: CctpService,
   ) {}
 
   async createIntent(payload: CreateIntentDto): Promise<IntentResponseDto> {
@@ -446,7 +448,8 @@ export class BridgeService {
         continue;
       }
 
-      const destinationToken = balance.token;
+      const destinationToken: SupportedToken =
+        balance.chain === 'monad' ? balance.token : 'mon';
 
       try {
         const quote = await this.quoteService.quote(
@@ -695,11 +698,6 @@ export class BridgeService {
       );
     }
 
-    const submissionStatus: BridgeSubmissionStatus =
-      sanitizedAmount <= base.availableAmount * 0.1
-        ? 'awaiting_source'
-        : 'pending_settlement';
-
     const quote = await this.quoteService.quote(
       base.sourceChain,
       base.sourceToken,
@@ -711,6 +709,16 @@ export class BridgeService {
 
     const usdAmount = sanitizedAmount * quote.sourceUsdPrice;
     await this.assertAllowance(sessionCtx, usdAmount);
+
+    const cctpResult = await this.cctpService.simulateTransfer({
+      intentId,
+      sourceChain: base.sourceChain,
+      destinationChain: base.destinationChain,
+      amount: sanitizedAmount,
+      walletProvider: provider,
+    });
+
+    const submissionStatus: BridgeSubmissionStatus = cctpResult.status;
 
     const record = await this.persistIntent({
       payload: {
@@ -727,7 +735,7 @@ export class BridgeService {
       accountId: sessionCtx.accountId ?? undefined,
     });
 
-    const txHash = this.generateTxHash(base.sourceChain);
+    const txHash = cctpResult.txHash || this.generateTxHash(base.sourceChain);
 
     return {
       intentId: record.intentId,

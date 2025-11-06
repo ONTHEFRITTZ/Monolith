@@ -657,6 +657,28 @@
   margin-left: auto;
 }
 
+.consoleButton {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f7fa;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(231, 168, 255, 0.25);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.consoleButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
 .planButton {
   border: none;
   border-radius: 999px;
@@ -685,6 +707,30 @@
 .planButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.rampFloatingButton {
+  position: fixed;
+  bottom: 32px;
+  right: 184px;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(231, 168, 255, 0.25);
+  color: #f5f7fa;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+  z-index: 30;
+}
+
+.rampFloatingButton:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .connectedPillFixed {
@@ -890,6 +936,11 @@
     right: 18px;
     padding: 10px 18px;
   }
+
+  .rampFloatingButton {
+    bottom: 70px;
+    right: 18px;
+  }
 }
 
 .modalOverlay {
@@ -918,6 +969,72 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.premiumPanel {
+  max-width: min(960px, 94vw);
+}
+
+.premiumSection {
+  background: rgba(20, 8, 38, 0.6);
+  border: 1px solid rgba(210, 145, 255, 0.18);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.premiumActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.preferenceGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.preferenceButton,
+.preferenceButtonActive {
+  border-radius: 16px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid rgba(210, 145, 255, 0.18);
+  background: rgba(16, 6, 28, 0.7);
+  color: #f1e9ff;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.preferenceButton:hover {
+  background: rgba(28, 12, 46, 0.8);
+  border-color: rgba(210, 145, 255, 0.32);
+}
+
+.preferenceButtonActive {
+  border-color: rgba(236, 198, 255, 0.6);
+  background: linear-gradient(135deg, rgba(210, 102, 255, 0.12), rgba(120, 60, 220, 0.25));
+  box-shadow: 0 12px 28px rgba(80, 20, 120, 0.35);
+}
+
+.preferenceButton strong,
+.preferenceButtonActive strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.preferenceButton small,
+.preferenceButtonActive small {
+  color: rgba(226, 220, 255, 0.75);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .modalHeader {
