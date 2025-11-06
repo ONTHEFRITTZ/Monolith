@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./OnboardingFlow.module.css";
 import { OnboardingStepIdentify } from "./OnboardingStepIdentify";
 import { OnboardingStepSecure } from "./OnboardingStepSecure";
@@ -28,6 +29,7 @@ const stepMeta = [
 ] as const;
 
 const SESSION_STORAGE_KEY = "monolith:onboarding:session";
+const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
 
 interface StoredOnboardingSession {
   sessionId: string;
@@ -43,9 +45,11 @@ interface StoredOnboardingSession {
 
 export function OnboardingFlow() {
   const { state, actions } = useOnboardingState();
+  const router = useRouter();
   const [stepBusy, setStepBusy] = useState(false);
   const [linkingProvider, setLinkingProvider] = useState<WalletProvider | null>(null);
   const [hasResumed, setHasResumed] = useState(false);
+  const [redirectScheduled, setRedirectScheduled] = useState(false);
 
   const currentIndex = useMemo(
     () => stepMeta.findIndex((step) => step.id === state.currentStep),
@@ -237,6 +241,7 @@ export function OnboardingFlow() {
         throw new Error(`Unexpected onboarding status: ${response.status}`);
       }
 
+      queueAutoConnect(state.linkedWallets);
       actions.complete({
         accountAddress: response.accountAddress,
         paymasterPolicyId: response.paymasterPolicyId,
@@ -301,6 +306,7 @@ export function OnboardingFlow() {
         if (stored.status !== "completed") {
           actions.advance();
         } else if (stored.accountAddress || stored.paymasterPolicyId) {
+          queueAutoConnect(stored.linkedWallets ?? []);
           actions.complete({
             accountAddress: stored.accountAddress ?? stored.ownerAddress,
             paymasterPolicyId: stored.paymasterPolicyId ?? "",
@@ -328,6 +334,7 @@ export function OnboardingFlow() {
         });
 
         if (status.status === "completed") {
+          queueAutoConnect(nextWallets);
           actions.complete({
             accountAddress:
               status.smartAccountAddress ?? stored.accountAddress ?? stored.ownerAddress,
@@ -344,6 +351,19 @@ export function OnboardingFlow() {
 
     void resume();
   }, [actions, hasResumed]);
+
+  useEffect(() => {
+    if (state.currentStep !== "completed" && redirectScheduled) {
+      setRedirectScheduled(false);
+    }
+  }, [redirectScheduled, state.currentStep]);
+
+  useEffect(() => {
+    if (state.currentStep === "completed" && !redirectScheduled) {
+      setRedirectScheduled(true);
+      router.push("/bridge");
+    }
+  }, [redirectScheduled, router, state.currentStep]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -518,6 +538,26 @@ function clearStoredSession(): void {
     return;
   }
   window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
+function queueAutoConnect(wallets: LinkedWallet[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!wallets || wallets.length === 0) {
+    window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
+    return;
+  }
+
+  const providers = Array.from(new Set(wallets.map((wallet) => wallet.provider)));
+
+  if (providers.length === 0) {
+    window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(AUTO_CONNECT_STORAGE_KEY, JSON.stringify(providers));
 }
 
 function dedupeLinkedWallets(wallets: LinkedWallet[]): LinkedWallet[] {

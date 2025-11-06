@@ -18,6 +18,7 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   phantom: "/logos/phantom.png",
   backpack: "/logos/backpack.png",
 };
+const AUTO_CONNECT_STORAGE_KEY = "monolith:bridge:autoConnect";
 
 export function BridgeFlow() {
   const { state, actions } = useBridgeState();
@@ -27,6 +28,60 @@ export function BridgeFlow() {
   const [profileOpen, setProfileOpen] = useState(true);
   const [guestMode, setGuestMode] = useState(false);
   const [walletSelectorOpen, setWalletSelectorOpen] = useState(false);
+  const [autoConnectProviders, setAutoConnectProviders] = useState<WalletProvider[] | null>(null);
+  const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const raw = window.localStorage.getItem(AUTO_CONNECT_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    window.localStorage.removeItem(AUTO_CONNECT_STORAGE_KEY);
+    try {
+      const parsed = JSON.parse(raw) as WalletProvider[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setAutoConnectProviders(parsed);
+      }
+    } catch (error) {
+      console.error("Failed to parse auto-connect providers", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!autoConnectProviders || autoConnectAttempted) {
+      return;
+    }
+    let cancelled = false;
+
+    const run = async () => {
+      for (const provider of autoConnectProviders) {
+        const alreadyConnected = state.connectedWallets.some(
+          (wallet) => wallet.provider === provider
+        );
+        if (alreadyConnected) {
+          continue;
+        }
+        try {
+          await actions.connectProvider(provider);
+        } catch (error) {
+          console.error(`Auto-connect failed for ${provider}`, error);
+        }
+      }
+    };
+
+    void run().finally(() => {
+      if (!cancelled) {
+        setAutoConnectAttempted(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actions, autoConnectAttempted, autoConnectProviders, state.connectedWallets]);
 
   const handleSelect = (intent: BalanceIntent) => {
     actions.selectIntent(intent);

@@ -34,7 +34,7 @@ export function OnboardingStepCompleted({ state, onReset }: OnboardingStepComple
         <button type="button" className={styles.ghostButton} onClick={onReset}>
           Start over
         </button>
-        <Link className={styles.primaryButton} href="/">
+        <Link className={styles.primaryButton} href="/bridge">
           Bridge USDC &lt;-&gt; MON
         </Link>
       </div>
