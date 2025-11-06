@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createModularAccountAlchemyClient,
@@ -77,33 +82,86 @@ interface SessionProfileMetadata {
 
 @Injectable()
 export class AaService {
+  private readonly logger = new Logger(AaService.name);
+  private readonly alchemy: AlchemyOnboardingClient;
+
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) {
+    this.alchemy = new AlchemyOnboardingClient(this.config);
+  }
 
   async startSession(
     payload: StartSessionRequestDto,
   ): Promise<StartSessionResponseDto> {
-    const sessionId = this.generateSessionId(payload.loginType, payload.email);
+    const chainKey = SUPPORTED_LOGIN_CHAIN[payload.loginType];
 
-    const {
-      client: smartAccount,
-      ownerPrivateKey,
-      ownerAddress,
-    } = await this.createSmartAccountClient(
-      SUPPORTED_LOGIN_CHAIN[payload.loginType],
-    );
+    const fallbackAccount = await this.createSmartAccountClient(chainKey);
+    const fallbackSmartAccountAddress =
+      await fallbackAccount.client.getAddress();
 
-    const smartAccountAddress = await smartAccount.getAddress();
+    let sessionId = this.generateSessionId(payload.loginType, payload.email);
+    let ownerAddress = fallbackAccount.ownerAddress;
+    let smartAccountAddress = fallbackSmartAccountAddress;
+    let ownerPrivateKey = fallbackAccount.ownerPrivateKey;
+    let sessionStatus: 'pending' | 'completed' | 'failed' = 'pending';
+    let linkedWalletsDto: LinkedWalletDto[] | undefined;
+
+    try {
+      const external = await this.alchemy.startSession(
+        payload.loginType,
+        chainKey,
+        payload.email,
+      );
+      if (external.sessionId) {
+        sessionId = external.sessionId;
+      }
+      if (external.ownerAddress) {
+        ownerAddress = external.ownerAddress;
+        ownerPrivateKey = '0x';
+      } else if (external.owner?.address) {
+        ownerAddress = external.owner.address;
+        ownerPrivateKey = '0x';
+      }
+      if (external.smartAccountAddress) {
+        smartAccountAddress = external.smartAccountAddress;
+      } else if (external.smartAccount?.address) {
+        smartAccountAddress = external.smartAccount.address;
+      }
+      if (external.status) {
+        sessionStatus = external.status;
+      }
+      const externalWallets = normalizeExternalLinkedWallets(
+        external.linkedWallets,
+      );
+      if (externalWallets) {
+        linkedWalletsDto = externalWallets;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Alchemy start session fallback engaged: ${(error as Error).message}`,
+      );
+    }
+
+    if (!ownerAddress) {
+      throw new Error('Failed to determine owner address for onboarding.');
+    }
+
+    if (!smartAccountAddress) {
+      smartAccountAddress = fallbackSmartAccountAddress;
+    }
+
     const paymasterPolicyId =
       this.config.get<string>('PAYMASTER_POLICY_ID') ?? undefined;
+
+    const linkedWalletsJson = encodeLinkedWallets(linkedWalletsDto);
 
     const account = await this.upsertAccount({
       smartAccountAddress,
       primaryOwnerAddress: ownerAddress,
       loginType: payload.loginType,
-      linkedWallets: [],
+      linkedWallets: linkedWalletsJson,
     });
 
     await this.prisma.session.create({
@@ -112,12 +170,12 @@ export class AaService {
         loginType: payload.loginType,
         ownerAddress,
         email: payload.email,
-        status: 'pending',
+        status: sessionStatus,
         smartAccountAddress,
         ownerPrivateKey,
         paymasterPolicyId,
         accountId: account.id,
-        linkedWallets: [],
+        linkedWallets: linkedWalletsJson,
       },
     });
 
@@ -146,6 +204,24 @@ export class AaService {
         passkeyEnrolled: payload.passkeyEnrolled,
       },
     });
+
+    try {
+      await this.alchemy.saveRecovery({
+        sessionId: payload.sessionId,
+        contacts: payload.contacts,
+        threshold: payload.threshold,
+        passkeyEnrolled: payload.passkeyEnrolled,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync recovery contacts with Alchemy: ${
+          (error as Error).message
+        }`,
+      );
+      throw new BadRequestException(
+        'Unable to update recovery settings. Please retry in a moment.',
+      );
+    }
 
     return { success: true };
   }
@@ -282,11 +358,7 @@ export class AaService {
       sponsorship.plan === SponsorshipPlan.SELF
         ? null
         : (this.config.get<string>('PAYMASTER_POLICY_ID') ?? null);
-    const linkedWalletsJson = linkedWallets.map((wallet) => ({
-      provider: wallet.provider,
-      address: wallet.address,
-      chains: wallet.chains,
-    })) as Prisma.JsonArray;
+    const linkedWalletsJson = encodeLinkedWallets(linkedWallets);
 
     const recoveryContactsJson = payload.accountIntent.recoveryContacts.map(
       (contact) => ({
@@ -595,4 +667,200 @@ function mapLinkedWallets(
   });
 
   return result.length > 0 ? result : undefined;
+}
+
+function encodeLinkedWallets(
+  value: LinkedWalletDto[] | undefined,
+): Prisma.JsonArray {
+  if (!value || value.length === 0) {
+    return [] as unknown as Prisma.JsonArray;
+  }
+
+  return value.map((wallet) => ({
+    provider: wallet.provider,
+    address: wallet.address,
+    chains: wallet.chains,
+  })) as unknown as Prisma.JsonArray;
+}
+
+type ExternalLinkedWallet = {
+  provider?: string;
+  address?: string;
+  chains?: string[];
+};
+
+function normalizeExternalLinkedWallets(
+  value: ExternalLinkedWallet[] | undefined,
+): LinkedWalletDto[] | undefined {
+  if (!value || value.length === 0) {
+    return undefined;
+  }
+
+  const allowed = new Set(Object.values(LinkedWalletProvider));
+  const result: LinkedWalletDto[] = [];
+
+  value.forEach((wallet) => {
+    const provider =
+      typeof wallet.provider === 'string' &&
+      allowed.has(wallet.provider as LinkedWalletProvider)
+        ? (wallet.provider as LinkedWalletProvider)
+        : undefined;
+    const address =
+      typeof wallet.address === 'string' ? wallet.address : undefined;
+    if (!provider || !address) {
+      return;
+    }
+
+    const chains = Array.isArray(wallet.chains)
+      ? wallet.chains.filter(
+          (chain): chain is string => typeof chain === 'string',
+        )
+      : [];
+
+    result.push({
+      provider,
+      address,
+      chains,
+    });
+  });
+
+  return result.length > 0 ? result : undefined;
+}
+
+class AlchemyOnboardingClient {
+  private readonly baseUrl: string;
+  private readonly appId: string;
+  private readonly apiKey?: string;
+
+  constructor(private readonly config: ConfigService) {
+    this.appId = this.config.getOrThrow<string>('ALCHEMY_APP_ID');
+    this.baseUrl = (
+      this.config.get<string>('ALCHEMY_AA_BASE_URL') ??
+      'https://api.g.alchemy.com/aa/v1'
+    ).replace(/\/$/, '');
+    this.apiKey =
+      this.config.get<string>('ALCHEMY_AA_API_KEY') ??
+      this.config.get<string>('ALCHEMY_TOKEN_API_KEY') ??
+      this.config.get<string>('ALCHEMY_APP_TOKEN') ??
+      undefined;
+  }
+
+  async startSession(
+    loginType: LoginType,
+    chainKey: 'ethereum' | 'arbitrum',
+    email?: string,
+  ): Promise<AlchemyStartSessionResponse> {
+    return this.request<AlchemyStartSessionResponse>('POST', '/sessions', {
+      loginType,
+      email,
+      chain: chainKey,
+    });
+  }
+
+  async saveRecovery(payload: {
+    sessionId: string;
+    contacts: string[];
+    threshold: number;
+    passkeyEnrolled: boolean;
+  }): Promise<void> {
+    await this.request<void>('PUT', `/sessions/${payload.sessionId}/recovery`, {
+      contacts: payload.contacts,
+      threshold: payload.threshold,
+      passkeyEnrolled: payload.passkeyEnrolled,
+    });
+  }
+
+  async finalizeOnboarding(
+    sessionId: string,
+    payload: {
+      accountIntent: {
+        owner: string;
+        loginType: LoginType;
+        email?: string;
+        recoveryContacts: Array<{ type: string; value: string }>;
+        recoveryThreshold: number;
+        passkeyEnrolled: boolean;
+        linkedWallets: LinkedWalletDto[];
+        socialLogins: Array<'google' | 'apple'>;
+        preferences: Record<string, unknown>;
+      };
+      sponsorship: {
+        plan: SponsorshipPlan;
+        acceptedTermsVersion: string;
+      };
+    },
+  ): Promise<AlchemyFinalizeOnboardingResponse> {
+    return this.request<AlchemyFinalizeOnboardingResponse>(
+      'POST',
+      `/sessions/${sessionId}/onboard`,
+      payload,
+    );
+  }
+
+  async getSession(sessionId: string): Promise<AlchemySessionStatusResponse> {
+    return this.request<AlchemySessionStatusResponse>(
+      'GET',
+      `/sessions/${sessionId}`,
+    );
+  }
+
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
+    const url = `${this.baseUrl}/${this.appId}${path}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.apiKey) {
+      headers['X-Alchemy-Token'] = this.apiKey;
+      headers.Authorization = `Bearer ${this.apiKey}`;
+    }
+
+    const response = await globalThis.fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(
+        `Alchemy onboarding request failed (${response.status}): ${text}`,
+      );
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return (await response.json()) as T;
+  }
+}
+
+interface AlchemyStartSessionResponse {
+  sessionId?: string;
+  ownerAddress?: string;
+  owner?: { address?: string };
+  smartAccountAddress?: string;
+  smartAccount?: { address?: string };
+  status?: 'pending' | 'completed' | 'failed';
+  linkedWallets?: ExternalLinkedWallet[];
+}
+
+interface AlchemyFinalizeOnboardingResponse {
+  smartAccountAddress?: string;
+  status?: 'pending' | 'completed';
+  paymasterPolicyId?: string | null;
+  linkedWallets?: ExternalLinkedWallet[];
+}
+
+interface AlchemySessionStatusResponse {
+  sessionId?: string;
+  status?: 'pending' | 'completed' | 'failed';
+  ownerAddress?: string;
+  smartAccountAddress?: string;
+  paymasterPolicyId?: string | null;
+  linkedWallets?: ExternalLinkedWallet[];
 }

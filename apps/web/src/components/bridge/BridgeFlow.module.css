@@ -620,7 +620,7 @@
 
 .brandMark img {
   display: block;
-  width: 140px;
+  width: 170px;
   height: auto;
 }
 
@@ -631,7 +631,7 @@
   }
 
   .brandMark img {
-    width: 100px;
+    width: 120px;
     height: auto;
   }
 }
@@ -639,7 +639,7 @@
 .utilityRail {
   position: fixed;
   top: 24px;
-  right: 32px;
+  left: 220px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -662,6 +662,7 @@
     transform 0.2s ease,
     box-shadow 0.2s ease;
   backdrop-filter: blur(6px);
+  margin-left: 0;
 }
 
 .planButton:hover {
