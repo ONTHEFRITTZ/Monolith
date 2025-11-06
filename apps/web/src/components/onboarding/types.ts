@@ -1,3 +1,5 @@
+import type { SupportedChain, WalletProvider } from "../bridge/types";
+
 export type OnboardingStep = "identify" | "secure" | "gas" | "review" | "completed";
 
 export type LoginType = "metamask" | "email" | "social";
@@ -18,12 +20,21 @@ export interface SponsorshipEstimate {
   recommended: boolean;
 }
 
+import type { SupportedChain, WalletProvider } from "../bridge/types";
+
+export interface LinkedWallet {
+  provider: WalletProvider;
+  address: string;
+  chains: SupportedChain[];
+}
+
 export interface OnboardingState {
   currentStep: OnboardingStep;
   sessionId?: string;
   loginType?: LoginType;
   ownerAddress?: string;
   email?: string;
+  linkedWallets: LinkedWallet[];
   contacts: RecoveryContact[];
   recoveryThreshold: number;
   passkeyEnrolled: boolean;
@@ -46,6 +57,9 @@ export interface OnboardingActions {
     ownerAddress: string;
     email?: string;
   }) => void;
+  setLinkedWallets: (wallets: LinkedWallet[]) => void;
+  addLinkedWallet: (wallet: LinkedWallet) => void;
+  removeLinkedWallet: (address: string) => void;
   setRecovery: (payload: {
     contacts: RecoveryContact[];
     recoveryThreshold: number;

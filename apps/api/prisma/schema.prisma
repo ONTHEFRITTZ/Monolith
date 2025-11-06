@@ -12,6 +12,7 @@ model Account {
   smartAccountAddress  String         @unique
   primaryOwnerAddress  String
   loginType            String
+  linkedWallets        Json?
   status               String         @default("active")
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
@@ -28,6 +29,7 @@ model Session {
   status              String   @default("pending")
   smartAccountAddress String
   ownerPrivateKey     String
+  linkedWallets       Json?
   recoveryContacts    Json?
   recoveryThreshold   Int?
   passkeyEnrolled     Boolean? @default(false)

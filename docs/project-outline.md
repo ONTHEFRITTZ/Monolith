@@ -44,11 +44,15 @@
 5. **Analytics & Insights**
    - Dashboard for volume, fees, and latency metrics.
    - Exportable reports (CSV, API).
-6. **Expansion Tracks**
-   - PayPal/off-ramp agent API integration.
-   - Merchant SDK and checkout widget.
-   - Institutional multi-user workspace with approvals.
-   - Cross-chain support (LayerZero/Wormhole) for future assets.
+6. **Expansion & Monetisation Tracks**
+   - **Fiat off-ramps:** Integrate regulated partners (PayPal or agent network) with KYC hooks and instant ACH/SEPA payouts so sponsored users can exit directly to fiat.
+   - **Compliance tooling:** Policy engine with OFAC screening, velocity limits, rule-based approvals, and exportable audit artefacts for enterprise plans.
+   - **Analytics APIs & dashboards:** Programmatic access to bridge volume, fee share, and latency metrics plus web dashboards for revenue reconciliation.
+   - **Partner routing marketplace:** Allow LPs, market makers, and alternative bridges to plug in custom routes; share revenue with sponsored wallets via referral rebates.
+   - **Data insights opt-in:** Starter users can opt into anonymised flow telemetry; rebates from aggregated insights offset sponsorship costs while respecting privacy controls.
+   - **Merchant SDK & checkout widget:** Drop-in component for ecommerce platforms needing fast MON settlement.
+   - **Institutional workspace:** Multi-user roles, delegated approvals, treasury reporting, and SOC2 audit support.
+   - **Cross-chain asset expansion:** LayerZero/Wormhole connectors for additional stables post-mainnet.
 
 ## 5. Workstreams & Owners (to assign)
 

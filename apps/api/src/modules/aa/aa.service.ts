@@ -88,6 +88,7 @@ export class AaService {
       smartAccountAddress,
       primaryOwnerAddress: ownerAddress,
       loginType: payload.loginType,
+      linkedWallets: [],
     });
 
     await this.prisma.session.create({
@@ -101,6 +102,7 @@ export class AaService {
         ownerPrivateKey,
         paymasterPolicyId,
         accountId: account.id,
+        linkedWallets: [],
       },
     });
 
@@ -148,6 +150,12 @@ export class AaService {
 
     const accountIntent = payload.accountIntent;
     const sponsorship = payload.sponsorship;
+    const linkedWallets = accountIntent.linkedWallets ?? [];
+    const linkedWalletsJson = linkedWallets.map((wallet) => ({
+      provider: wallet.provider,
+      address: wallet.address,
+      chains: wallet.chains,
+    })) as Prisma.JsonArray;
 
     const recoveryContactsJson = payload.accountIntent.recoveryContacts.map(
       (contact) => ({
@@ -166,6 +174,7 @@ export class AaService {
         passkeyEnrolled: accountIntent.passkeyEnrolled,
         sponsorshipPlan: sponsorship.plan,
         sponsorshipTerms: sponsorship.acceptedTermsVersion,
+        linkedWallets: linkedWalletsJson,
       },
     });
 
@@ -174,6 +183,7 @@ export class AaService {
       data: {
         primaryOwnerAddress: accountIntent.owner,
         loginType: accountIntent.loginType,
+        linkedWallets: linkedWalletsJson,
       },
     });
 
@@ -198,6 +208,10 @@ export class AaService {
       status: session.status as StatusResponseDto['status'],
       smartAccountAddress: session.smartAccountAddress,
       paymasterPolicyId: session.paymasterPolicyId ?? undefined,
+      loginType: session.loginType as LoginType,
+      ownerAddress: session.ownerAddress,
+      email: session.email ?? undefined,
+      linkedWallets: mapLinkedWallets(session.linkedWallets),
     };
   }
 
@@ -253,14 +267,21 @@ export class AaService {
     smartAccountAddress: string;
     primaryOwnerAddress: string;
     loginType: LoginType;
+    linkedWallets?: Prisma.JsonArray;
   }): Promise<Account> {
-    const { smartAccountAddress, primaryOwnerAddress, loginType } = params;
+    const {
+      smartAccountAddress,
+      primaryOwnerAddress,
+      loginType,
+      linkedWallets,
+    } = params;
 
     return this.prisma.account.upsert({
       where: { smartAccountAddress },
       update: {
         primaryOwnerAddress,
         loginType,
+        linkedWallets: linkedWallets ?? undefined,
         updatedAt: new Date(),
       },
       create: {
@@ -268,7 +289,47 @@ export class AaService {
         primaryOwnerAddress,
         loginType,
         status: 'active',
+        linkedWallets: linkedWallets ?? undefined,
       },
     });
   }
+}
+
+function mapLinkedWallets(
+  value: Prisma.JsonValue | null | undefined,
+): Array<{ provider: string; address: string; chains: string[] }> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const result: Array<{
+    provider: string;
+    address: string;
+    chains: string[];
+  }> = [];
+
+  value.forEach((item) => {
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+    const entry = item as Record<string, unknown>;
+    const provider =
+      typeof entry.provider === 'string' ? entry.provider : undefined;
+    const address =
+      typeof entry.address === 'string' ? entry.address : undefined;
+    const chainsRaw = Array.isArray(entry.chains) ? entry.chains : [];
+    const chains = chainsRaw.filter(
+      (chain): chain is string => typeof chain === 'string',
+    );
+
+    if (provider && address) {
+      result.push({
+        provider,
+        address,
+        chains,
+      });
+    }
+  });
+
+  return result.length > 0 ? result : undefined;
 }

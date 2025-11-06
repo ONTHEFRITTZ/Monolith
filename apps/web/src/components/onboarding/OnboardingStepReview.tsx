@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { providerLabel } from "../bridge/bridgeClient";
 import type { OnboardingState } from "./types";
 import styles from "./OnboardingFlow.module.css";
 
@@ -30,11 +31,15 @@ export function OnboardingStepReview({
           <dl>
             <div>
               <dt>Login method</dt>
-              <dd>{state.loginType ?? "—"}</dd>
+              <dd>{formatLoginMethod(state.loginType)}</dd>
             </div>
             <div>
               <dt>Owner address</dt>
-              <dd className={styles.addressMono}>{state.ownerAddress ?? "pending"}</dd>
+              <dd className={styles.addressMono}>{state.ownerAddress ?? "Pending"}</dd>
+            </div>
+            <div>
+              <dt>Linked wallets</dt>
+              <dd>{formatLinkedWallets(state)}</dd>
             </div>
           </dl>
         </div>
@@ -114,4 +119,31 @@ export function OnboardingStepReview({
       </div>
     </div>
   );
+}
+
+function formatLoginMethod(loginType?: OnboardingState["loginType"]): string {
+  switch (loginType) {
+    case "metamask":
+      return "MetaMask smart account";
+    case "email":
+      return "Magic link";
+    case "social":
+      return "Google / Apple SSO";
+    default:
+      return "Not set";
+  }
+}
+
+function formatLinkedWallets(state: OnboardingState): string {
+  if (state.linkedWallets.length === 0) {
+    return "None linked";
+  }
+  return state.linkedWallets
+    .map((wallet) => `${providerLabel(wallet.provider)} · ${shortAddress(wallet.address)}`)
+    .join(", ");
+}
+
+function shortAddress(address: string): string {
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }

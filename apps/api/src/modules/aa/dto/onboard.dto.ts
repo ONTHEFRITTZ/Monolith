@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -21,6 +22,32 @@ export enum SponsorshipPlan {
   STARTER = 'starter',
   PRO = 'pro',
   SELF = 'self',
+}
+
+export enum LinkedWalletProvider {
+  METAMASK = 'metamask',
+  PHANTOM = 'phantom',
+  BACKPACK = 'backpack',
+}
+
+const SUPPORTED_LINKED_CHAINS = [
+  'ethereum',
+  'arbitrum',
+  'solana',
+  'monad',
+] as const;
+
+export class LinkedWalletDto {
+  @IsEnum(LinkedWalletProvider)
+  provider: LinkedWalletProvider;
+
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @IsArray()
+  @IsIn(SUPPORTED_LINKED_CHAINS, { each: true })
+  chains: string[];
 }
 
 export class RecoveryContactDto {
@@ -54,6 +81,11 @@ export class AccountIntentDto {
 
   @IsBoolean()
   passkeyEnrolled: boolean;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => LinkedWalletDto)
+  linkedWallets?: LinkedWalletDto[];
 }
 
 export class SponsorshipDto {

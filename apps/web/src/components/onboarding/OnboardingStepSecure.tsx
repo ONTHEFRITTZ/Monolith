@@ -1,4 +1,7 @@
+import Image from "next/image";
 import { useMemo, useState } from "react";
+import { providerLabel } from "../bridge/bridgeClient";
+import type { WalletProvider } from "../bridge/types";
 import type { OnboardingState } from "./types";
 import styles from "./OnboardingFlow.module.css";
 
@@ -10,13 +13,27 @@ interface OnboardingStepSecureProps {
     threshold: number;
   }) => Promise<void>;
   onBack: () => void;
+  onLinkWallet: (provider: WalletProvider) => Promise<void>;
+  onRemoveWallet: (address: string) => void;
+  linkingProvider: WalletProvider | null;
   isProcessing: boolean;
 }
+
+const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
+
+const WALLET_LOGOS: Record<WalletProvider, string> = {
+  metamask: "/logos/metamask.png",
+  phantom: "/logos/phantom.png",
+  backpack: "/logos/backpack.png",
+};
 
 export function OnboardingStepSecure({
   state,
   onContinue,
   onBack,
+  onLinkWallet,
+  onRemoveWallet,
+  linkingProvider,
   isProcessing,
 }: OnboardingStepSecureProps) {
   const defaultContacts = useMemo(() => {
@@ -66,8 +83,68 @@ export function OnboardingStepSecure({
     <form className={styles.stepPanel} onSubmit={handleContinue}>
       <p className={styles.stepDescription}>
         Recovery contacts help you regain access to your smart account if you lose devices. We
-        recommend listing trusted teammates or a backup email.
+        recommend listing trusted teammates or a backup email. Linking wallets is optional but lets
+        us discover balances automatically when you bridge later.
       </p>
+
+      <div className={styles.walletLinkSection}>
+        <span className={styles.fieldLabel}>Linked wallets</span>
+        <div className={styles.walletLinkOptions}>
+          {WALLET_OPTIONS.map((provider) => (
+            <button
+              key={provider}
+              type="button"
+              className={styles.walletLinkButton}
+              onClick={() => void onLinkWallet(provider)}
+              disabled={
+                isProcessing ||
+                linkingProvider === provider ||
+                linkingProvider !== null ||
+                state.currentStep !== "secure"
+              }
+            >
+              <span className={styles.walletLinkIcon}>
+                <Image src={WALLET_LOGOS[provider]} alt={`${providerLabel(provider)} logo`} fill />
+              </span>
+              <span className={styles.walletLinkLabel}>
+                {linkingProvider === provider ? "Linking..." : providerLabel(provider)}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <ul className={styles.linkedWalletList}>
+          {state.linkedWallets.map((wallet) => (
+            <li key={`${wallet.provider}:${wallet.address}`} className={styles.linkedWalletItem}>
+              <span className={styles.linkedWalletBadge}>
+                <span className={styles.linkedWalletBadgeIcon}>
+                  <Image
+                    src={WALLET_LOGOS[wallet.provider]}
+                    alt={`${providerLabel(wallet.provider)} logo`}
+                    fill
+                  />
+                </span>
+                <span>{providerLabel(wallet.provider)}</span>
+              </span>
+              <span className={styles.linkedWalletAddress}>{shortAddress(wallet.address)}</span>
+              <button
+                type="button"
+                className={styles.linkedWalletRemove}
+                onClick={() => onRemoveWallet(wallet.address)}
+                disabled={isProcessing || linkingProvider !== null}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {state.linkedWallets.length === 0 ? (
+          <p className={styles.helperText}>
+            Tip: link MetaMask, Phantom, or Backpack now to pre-fill balances automatically later.
+          </p>
+        ) : null}
+      </div>
 
       <div className={styles.fieldGroup}>
         <span className={styles.fieldLabel}>Recovery contacts</span>
@@ -137,4 +214,9 @@ export function OnboardingStepSecure({
       </div>
     </form>
   );
+}
+
+function shortAddress(address: string): string {
+  if (address.length <= 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }

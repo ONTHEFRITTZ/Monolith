@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type {
+  LinkedWallet,
   OnboardingActions,
   OnboardingState,
   OnboardingStep,
@@ -12,6 +13,7 @@ const STEP_ORDER: OnboardingStep[] = ["identify", "secure", "gas", "review", "co
 
 const defaultState: OnboardingState = {
   currentStep: "identify",
+  linkedWallets: [],
   contacts: [],
   recoveryThreshold: 2,
   passkeyEnrolled: false,
@@ -60,6 +62,24 @@ export function useOnboardingState(initial?: Partial<OnboardingState>): {
           loginType,
           ownerAddress,
           email,
+          linkedWallets: [],
+        })),
+      setLinkedWallets: (wallets) =>
+        setState((prev) => ({
+          ...prev,
+          linkedWallets: dedupeWallets(wallets),
+        })),
+      addLinkedWallet: (wallet) =>
+        setState((prev) => ({
+          ...prev,
+          linkedWallets: dedupeWallets([...prev.linkedWallets, wallet]),
+        })),
+      removeLinkedWallet: (address) =>
+        setState((prev) => ({
+          ...prev,
+          linkedWallets: prev.linkedWallets.filter(
+            (wallet) => wallet.address.toLowerCase() !== address.toLowerCase()
+          ),
         })),
       setRecovery: ({ contacts, recoveryThreshold, passkeyEnrolled }) =>
         setState((prev) => ({
@@ -146,4 +166,15 @@ export function defaultSponsorshipEstimate(plan: SponsorshipPlanId): Sponsorship
     note: "Bring your own gas. Paymaster will only intervene for stuck transactions.",
     recommended: false,
   };
+}
+
+function dedupeWallets(wallets: LinkedWallet[]): LinkedWallet[] {
+  const seen = new Map<string, LinkedWallet>();
+  wallets.forEach((wallet) => {
+    const key = `${wallet.provider}:${wallet.address.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.set(key, wallet);
+    }
+  });
+  return Array.from(seen.values());
 }

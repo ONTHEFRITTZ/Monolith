@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsOptional } from 'class-validator';
-import { LoginType } from './onboard.dto';
+import { LinkedWalletDto, LoginType } from './onboard.dto';
 
 export class StartSessionRequestDto {
   @IsEnum(LoginType)
@@ -20,4 +20,8 @@ export class StatusResponseDto {
   status: 'pending' | 'completed' | 'failed';
   smartAccountAddress?: string;
   paymasterPolicyId?: string;
+  loginType?: LoginType;
+  ownerAddress?: string;
+  email?: string;
+  linkedWallets?: LinkedWalletDto[];
 }

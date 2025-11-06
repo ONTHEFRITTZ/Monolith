@@ -102,6 +102,11 @@ export async function finalizeOnboarding(payload: {
   recoveryThreshold: number;
   passkeyEnrolled: boolean;
   plan: SponsorshipPlanId;
+  linkedWallets: Array<{
+    provider: string;
+    address: string;
+    chains: string[];
+  }>;
 }): Promise<{
   accountAddress: string;
   paymasterPolicyId: string;
@@ -125,6 +130,7 @@ export async function finalizeOnboarding(payload: {
         })),
         recoveryThreshold: payload.recoveryThreshold,
         passkeyEnrolled: payload.passkeyEnrolled,
+        linkedWallets: payload.linkedWallets,
       },
       sponsorship: {
         plan: payload.plan,
@@ -138,4 +144,23 @@ export async function finalizeOnboarding(payload: {
     paymasterPolicyId: response.paymasterPolicyId,
     status: response.status,
   };
+}
+
+export async function getSessionStatus(sessionId: string): Promise<{
+  sessionId: string;
+  status: "pending" | "completed" | "failed";
+  smartAccountAddress?: string;
+  paymasterPolicyId?: string;
+  loginType?: LoginType;
+  ownerAddress?: string;
+  email?: string;
+  linkedWallets?: Array<{
+    provider: string;
+    address: string;
+    chains: string[];
+  }>;
+}> {
+  return request(`/status/${sessionId}`, {
+    method: "GET",
+  });
 }

@@ -256,6 +256,131 @@
   gap: 8px;
 }
 
+.walletLinkSection {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(210, 145, 255, 0.14);
+}
+
+.walletLinkOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.walletLinkButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(210, 145, 255, 0.2);
+  background: linear-gradient(160deg, rgba(190, 82, 255, 0.16), rgba(42, 14, 68, 0.82));
+  color: inherit;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border 0.2s ease;
+  box-shadow: 0 18px 42px rgba(84, 42, 132, 0.32);
+}
+
+.walletLinkButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.walletLinkButton:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 58px rgba(112, 58, 180, 0.45);
+  border-color: rgba(210, 145, 255, 0.42);
+}
+
+.walletLinkIcon {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.walletLinkLabel {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(246, 238, 255, 0.96);
+}
+
+.linkedWalletList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.linkedWalletItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(20, 10, 32, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.linkedWalletBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #f5f7fa;
+}
+
+.linkedWalletBadgeIcon {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.linkedWalletAddress {
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  color: rgba(210, 233, 255, 0.85);
+  word-break: break-all;
+}
+
+.linkedWalletRemove {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(236, 210, 255, 0.88);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.linkedWalletRemove:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.linkedWalletRemove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .fieldLabel {
   font-size: 13px;
   text-transform: uppercase;

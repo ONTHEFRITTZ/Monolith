@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useMemo, useState } from "react";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./OnboardingFlow.module.css";
 import { OnboardingStepIdentify } from "./OnboardingStepIdentify";
 import { OnboardingStepSecure } from "./OnboardingStepSecure";
@@ -7,8 +8,16 @@ import { OnboardingStepGas } from "./OnboardingStepGas";
 import { OnboardingStepReview } from "./OnboardingStepReview";
 import { OnboardingStepCompleted } from "./OnboardingStepCompleted";
 import { useOnboardingState, normaliseContacts } from "./useOnboardingState";
-import type { LoginType, SponsorshipPlanId } from "./types";
-import { estimateSponsorship, finalizeOnboarding, saveRecovery, startSession } from "./client";
+import type { LinkedWallet, LoginType, SponsorshipPlanId } from "./types";
+import type { WalletProvider } from "../bridge/types";
+import { getConnector } from "@/lib/wallets/connectors";
+import {
+  estimateSponsorship,
+  finalizeOnboarding,
+  getSessionStatus,
+  saveRecovery,
+  startSession,
+} from "./client";
 
 const stepMeta = [
   { id: "identify", title: "Identify", description: "Connect your smart account." },
@@ -18,9 +27,25 @@ const stepMeta = [
   { id: "completed", title: "Completed", description: "Smart account ready." },
 ] as const;
 
+const SESSION_STORAGE_KEY = "monolith:onboarding:session";
+
+interface StoredOnboardingSession {
+  sessionId: string;
+  loginType: LoginType;
+  ownerAddress: string;
+  email?: string;
+  status: "pending" | "completed" | "failed";
+  linkedWallets?: LinkedWallet[];
+  accountAddress?: string;
+  paymasterPolicyId?: string;
+  updatedAt: number;
+}
+
 export function OnboardingFlow() {
   const { state, actions } = useOnboardingState();
   const [stepBusy, setStepBusy] = useState(false);
+  const [linkingProvider, setLinkingProvider] = useState<WalletProvider | null>(null);
+  const [hasResumed, setHasResumed] = useState(false);
 
   const currentIndex = useMemo(
     () => stepMeta.findIndex((step) => step.id === state.currentStep),
@@ -48,6 +73,13 @@ export function OnboardingFlow() {
           email,
         });
         actions.setError(undefined);
+        persistSession(response.sessionId, {
+          loginType,
+          ownerAddress: response.ownerAddress,
+          email,
+          status: "pending",
+          linkedWallets: [],
+        });
         actions.advance();
       } catch (error) {
         handleError("Unable to initialise session. Please try again.");
@@ -66,6 +98,7 @@ export function OnboardingFlow() {
         if (!state.sessionId) {
           throw new Error("Session unavailable. Restart onboarding.");
         }
+
         setStepBusy(true);
         actions.setProcessing(true);
 
@@ -124,23 +157,66 @@ export function OnboardingFlow() {
     [actions, handleError]
   );
 
+  const handleLinkWallet = useCallback(
+    async (provider: WalletProvider) => {
+      if (!state.sessionId) {
+        actions.setError("Start a session before linking wallets.");
+        return;
+      }
+      try {
+        setLinkingProvider(provider);
+        actions.setError(undefined);
+        const connector = getConnector(provider);
+        const result = await connector.connect();
+        const deduped = dedupeLinkedWallets([
+          ...state.linkedWallets,
+          {
+            provider,
+            address: result.address,
+            chains: result.chains,
+          },
+        ]);
+        if (deduped.length === state.linkedWallets.length) {
+          actions.setError("Wallet already linked.");
+          return;
+        }
+        actions.setLinkedWallets(deduped);
+        persistSession(state.sessionId, { linkedWallets: deduped });
+      } catch (error) {
+        actions.setError("Unable to link wallet. Please try again.");
+        console.error(error);
+      } finally {
+        setLinkingProvider(null);
+      }
+    },
+    [actions, state.linkedWallets, state.sessionId]
+  );
+
+  const handleRemoveWallet = useCallback(
+    (address: string) => {
+      if (!state.sessionId) {
+        actions.removeLinkedWallet(address);
+        return;
+      }
+      const next = state.linkedWallets.filter(
+        (wallet) => wallet.address.toLowerCase() !== address.toLowerCase()
+      );
+      actions.setLinkedWallets(next);
+      persistSession(state.sessionId, { linkedWallets: next });
+    },
+    [actions, state.linkedWallets, state.sessionId]
+  );
+
   const handleReviewSubmit = useCallback(async () => {
     if (!state.sessionId || !state.loginType || !state.ownerAddress) {
-      handleError("Session information is incomplete. Restart onboarding.");
-      return;
-    }
-    if (!state.termsAccepted) {
-      handleError("Please accept the sponsorship terms before continuing.");
-      return;
-    }
-    if (!state.contacts || state.contacts.length === 0) {
-      handleError("Add at least one recovery contact before continuing.");
+      handleError("Session context missing. Restart onboarding.");
       return;
     }
 
     try {
       setStepBusy(true);
       actions.setProcessing(true);
+
       const response = await finalizeOnboarding({
         sessionId: state.sessionId,
         ownerAddress: state.ownerAddress,
@@ -150,6 +226,11 @@ export function OnboardingFlow() {
         recoveryThreshold: state.recoveryThreshold,
         passkeyEnrolled: state.passkeyEnrolled,
         plan: state.sponsorshipPlan,
+        linkedWallets: state.linkedWallets.map((wallet) => ({
+          provider: wallet.provider,
+          address: wallet.address,
+          chains: wallet.chains,
+        })),
       });
 
       if (response.status !== "completed") {
@@ -159,6 +240,12 @@ export function OnboardingFlow() {
       actions.complete({
         accountAddress: response.accountAddress,
         paymasterPolicyId: response.paymasterPolicyId,
+      });
+      persistSession(state.sessionId, {
+        status: response.status,
+        accountAddress: response.accountAddress,
+        paymasterPolicyId: response.paymasterPolicyId,
+        linkedWallets: state.linkedWallets,
       });
     } catch (error) {
       handleError("Onboarding failed at review stage. Try again or contact support.");
@@ -172,14 +259,91 @@ export function OnboardingFlow() {
     handleError,
     state.contacts,
     state.email,
+    state.linkedWallets,
     state.loginType,
     state.ownerAddress,
     state.passkeyEnrolled,
     state.recoveryThreshold,
     state.sessionId,
     state.sponsorshipPlan,
-    state.termsAccepted,
   ]);
+
+  const handleReset = useCallback(() => {
+    actions.reset();
+    clearStoredSession();
+    setHasResumed(false);
+  }, [actions]);
+
+  useEffect(() => {
+    if (hasResumed || typeof window === "undefined") {
+      return;
+    }
+
+    const stored = readStoredSession();
+    if (!stored) {
+      setHasResumed(true);
+      return;
+    }
+
+    const resume = async () => {
+      try {
+        actions.setIdentify({
+          sessionId: stored.sessionId,
+          loginType: stored.loginType,
+          ownerAddress: stored.ownerAddress,
+          email: stored.email,
+        });
+        if (stored.linkedWallets?.length) {
+          actions.setLinkedWallets(stored.linkedWallets);
+        }
+        actions.setError(undefined);
+
+        if (stored.status !== "completed") {
+          actions.advance();
+        } else if (stored.accountAddress || stored.paymasterPolicyId) {
+          actions.complete({
+            accountAddress: stored.accountAddress ?? stored.ownerAddress,
+            paymasterPolicyId: stored.paymasterPolicyId ?? "",
+          });
+        }
+
+        const status = await getSessionStatus(stored.sessionId);
+
+        if (status.status === "failed") {
+          actions.setError("Previous onboarding attempt failed. Please start again.");
+          clearStoredSession();
+          return;
+        }
+        const nextWallets = status.linkedWallets
+          ? normaliseLinkedWallets(status.linkedWallets)
+          : (stored.linkedWallets ?? []);
+        actions.setLinkedWallets(nextWallets);
+        persistSession(stored.sessionId, {
+          status: status.status,
+          ownerAddress: status.ownerAddress ?? stored.ownerAddress,
+          email: status.email ?? stored.email,
+          linkedWallets: nextWallets,
+          accountAddress: status.smartAccountAddress ?? stored.accountAddress,
+          paymasterPolicyId: status.paymasterPolicyId ?? stored.paymasterPolicyId,
+        });
+
+        if (status.status === "completed") {
+          actions.complete({
+            accountAddress:
+              status.smartAccountAddress ?? stored.accountAddress ?? stored.ownerAddress,
+            paymasterPolicyId: status.paymasterPolicyId ?? stored.paymasterPolicyId ?? "",
+          });
+        }
+      } catch (error) {
+        console.error(error);
+        clearStoredSession();
+      } finally {
+        setHasResumed(true);
+      }
+    };
+
+    void resume();
+  }, [actions, hasResumed]);
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -197,6 +361,9 @@ export function OnboardingFlow() {
         return (
           <OnboardingStepSecure
             state={state}
+            onLinkWallet={handleLinkWallet}
+            onRemoveWallet={handleRemoveWallet}
+            linkingProvider={linkingProvider}
             onContinue={handleSaveRecovery}
             onBack={actions.goBack}
             isProcessing={stepBusy}
@@ -225,7 +392,7 @@ export function OnboardingFlow() {
           />
         );
       case "completed":
-        return <OnboardingStepCompleted state={state} onReset={actions.reset} />;
+        return <OnboardingStepCompleted state={state} onReset={handleReset} />;
       default:
         return null;
     }
@@ -271,4 +438,109 @@ export function OnboardingFlow() {
   );
 }
 
-export default OnboardingFlow;
+function readStoredSession(): StoredOnboardingSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as StoredOnboardingSession;
+    return parsed.sessionId ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(session: StoredOnboardingSession): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function persistSession(
+  sessionId: string,
+  patch: Partial<Omit<StoredOnboardingSession, "sessionId" | "updatedAt">> & {
+    loginType?: LoginType;
+    ownerAddress?: string;
+  }
+): StoredOnboardingSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const existing = readStoredSession();
+  const isSameSession = existing && existing.sessionId === sessionId;
+
+  if (!isSameSession && (!patch.loginType || !patch.ownerAddress)) {
+    return null;
+  }
+
+  const base: StoredOnboardingSession =
+    isSameSession && existing
+      ? existing
+      : {
+          sessionId,
+          loginType: patch.loginType as LoginType,
+          ownerAddress: patch.ownerAddress as string,
+          email: patch.email,
+          status: patch.status ?? "pending",
+          linkedWallets: patch.linkedWallets ? dedupeLinkedWallets(patch.linkedWallets) : [],
+          accountAddress: patch.accountAddress,
+          paymasterPolicyId: patch.paymasterPolicyId,
+          updatedAt: Date.now(),
+        };
+
+  const merged: StoredOnboardingSession = {
+    ...base,
+    sessionId,
+    loginType: (patch.loginType ?? base.loginType) as LoginType,
+    ownerAddress: (patch.ownerAddress ?? base.ownerAddress) as string,
+    email: patch.email ?? base.email,
+    status: patch.status ?? base.status,
+    linkedWallets: patch.linkedWallets
+      ? dedupeLinkedWallets(patch.linkedWallets)
+      : base.linkedWallets,
+    accountAddress: patch.accountAddress ?? base.accountAddress,
+    paymasterPolicyId: patch.paymasterPolicyId ?? base.paymasterPolicyId,
+    updatedAt: Date.now(),
+  };
+
+  writeStoredSession(merged);
+  return merged;
+}
+
+function clearStoredSession(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
+function dedupeLinkedWallets(wallets: LinkedWallet[]): LinkedWallet[] {
+  const seen = new Map<string, LinkedWallet>();
+  wallets.forEach((wallet) => {
+    const key = `${wallet.provider}:${wallet.address.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.set(key, wallet);
+    }
+  });
+  return Array.from(seen.values());
+}
+
+function normaliseLinkedWallets(
+  wallets: Array<{ provider: string; address: string; chains: string[] }>
+): LinkedWallet[] {
+  return dedupeLinkedWallets(
+    wallets
+      .filter((wallet) => wallet.provider && wallet.address)
+      .map((wallet) => ({
+        provider: wallet.provider as WalletProvider,
+        address: wallet.address,
+        chains: wallet.chains as LinkedWallet["chains"],
+      }))
+  );
+}
