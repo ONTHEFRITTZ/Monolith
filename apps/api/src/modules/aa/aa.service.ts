@@ -380,11 +380,10 @@ export class AaService {
       accountIntent.socialLogins,
       accountIntent.preferences,
     );
-    const paymasterPolicyId =
+    const configuredPaymasterPolicyId =
       sponsorship.plan === SponsorshipPlan.SELF
         ? null
         : (this.config.get<string>('PAYMASTER_POLICY_ID') ?? null);
-    const linkedWalletsJson = encodeLinkedWallets(linkedWallets);
 
     const recoveryContactsJson = payload.accountIntent.recoveryContacts.map(
       (contact) => ({
@@ -393,10 +392,57 @@ export class AaService {
       }),
     ) as unknown as Prisma.JsonArray;
 
+    let finalizeResult: AlchemyFinalizeOnboardingResponse | null = null;
+    try {
+      finalizeResult = await this.alchemy.finalizeOnboarding(
+        payload.sessionId,
+        {
+          accountIntent: {
+            owner: accountIntent.owner,
+            loginType: accountIntent.loginType,
+            email: accountIntent.email ?? session.email ?? undefined,
+            recoveryContacts: accountIntent.recoveryContacts.map((contact) => ({
+              type: contact.type,
+              value: contact.value,
+            })),
+            recoveryThreshold: accountIntent.recoveryThreshold,
+            passkeyEnrolled: accountIntent.passkeyEnrolled,
+            linkedWallets,
+            socialLogins: accountIntent.socialLogins ?? [],
+            preferences: accountIntent.preferences ?? {},
+          },
+          sponsorship: {
+            plan: sponsorship.plan,
+            acceptedTermsVersion: sponsorship.acceptedTermsVersion,
+          },
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Alchemy finalize onboarding failed for session ${payload.sessionId}: ${
+          (error as Error).message
+        }`,
+      );
+      throw new BadRequestException(
+        'Unable to complete onboarding with Alchemy. Please retry shortly.',
+      );
+    }
+
+    const alchemyLinkedWallets = finalizeResult?.linkedWallets
+      ? normalizeExternalLinkedWallets(finalizeResult.linkedWallets)
+      : undefined;
+    const finalLinkedWallets = alchemyLinkedWallets ?? linkedWallets;
+    const linkedWalletsJson = encodeLinkedWallets(finalLinkedWallets);
+    const finalStatus = finalizeResult?.status ?? 'completed';
+    const finalSmartAccountAddress =
+      finalizeResult?.smartAccountAddress ?? session.smartAccountAddress;
+    const finalPaymasterPolicyId =
+      finalizeResult?.paymasterPolicyId ?? configuredPaymasterPolicyId;
+
     await this.prisma.session.update({
       where: { sessionId: payload.sessionId },
       data: {
-        status: 'completed',
+        status: finalStatus,
         email: accountIntent.email ?? session.email,
         recoveryContacts: recoveryContactsJson,
         recoveryThreshold: accountIntent.recoveryThreshold,
@@ -404,13 +450,15 @@ export class AaService {
         sponsorshipPlan: sponsorship.plan,
         sponsorshipTerms: sponsorshipTerms ?? sponsorship.acceptedTermsVersion,
         linkedWallets: linkedWalletsJson,
-        paymasterPolicyId,
+        paymasterPolicyId: finalPaymasterPolicyId,
+        smartAccountAddress: finalSmartAccountAddress,
       },
     });
 
     await this.prisma.account.update({
       where: { smartAccountAddress: session.smartAccountAddress },
       data: {
+        smartAccountAddress: finalSmartAccountAddress,
         primaryOwnerAddress: accountIntent.owner,
         loginType: accountIntent.loginType,
         linkedWallets: linkedWalletsJson,
@@ -418,19 +466,117 @@ export class AaService {
     });
 
     return {
-      smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId: paymasterPolicyId ?? '',
-      status: 'completed',
+      smartAccountAddress: finalSmartAccountAddress,
+      paymasterPolicyId: finalPaymasterPolicyId ?? '',
+      status: finalStatus,
     };
   }
 
   async getStatus(sessionId: string): Promise<StatusResponseDto> {
-    const session = await this.prisma.session.findUnique({
+    let session = await this.prisma.session.findUnique({
       where: { sessionId },
     });
 
     if (!session) {
       throw new NotFoundException(`Session ${sessionId} not found`);
+    }
+
+    const originalSmartAccountAddress = session.smartAccountAddress;
+    let remoteLinkedWallets: LinkedWalletDto[] | undefined;
+    let remoteStatus: 'pending' | 'completed' | 'failed' | undefined;
+    let remoteSmartAccountAddress: string | undefined;
+    let remotePaymasterPolicyId: string | null | undefined;
+    let remoteOwnerAddress: string | undefined;
+
+    try {
+      const external = await this.alchemy.getSession(sessionId);
+      if (external) {
+        remoteStatus = external.status;
+        remoteSmartAccountAddress = external.smartAccountAddress ?? undefined;
+        remotePaymasterPolicyId =
+          external.paymasterPolicyId !== undefined
+            ? external.paymasterPolicyId
+            : undefined;
+        remoteOwnerAddress = external.ownerAddress ?? undefined;
+        remoteLinkedWallets = normalizeExternalLinkedWallets(
+          external.linkedWallets,
+        );
+
+        const remoteLinkedWalletsJson = remoteLinkedWallets
+          ? encodeLinkedWallets(remoteLinkedWallets)
+          : undefined;
+
+        const sessionUpdate: Prisma.SessionUpdateInput = {};
+        const accountUpdate: Prisma.AccountUpdateInput = {};
+        if (remoteStatus && remoteStatus !== session.status) {
+          sessionUpdate.status = remoteStatus;
+        }
+        if (
+          remoteSmartAccountAddress &&
+          remoteSmartAccountAddress !== session.smartAccountAddress
+        ) {
+          sessionUpdate.smartAccountAddress = remoteSmartAccountAddress;
+        }
+        if (remotePaymasterPolicyId !== undefined) {
+          sessionUpdate.paymasterPolicyId = remotePaymasterPolicyId;
+        }
+        if (remoteOwnerAddress && remoteOwnerAddress !== session.ownerAddress) {
+          sessionUpdate.ownerAddress = remoteOwnerAddress;
+          accountUpdate.primaryOwnerAddress = remoteOwnerAddress;
+        }
+        if (remoteLinkedWalletsJson) {
+          sessionUpdate.linkedWallets = remoteLinkedWalletsJson;
+          accountUpdate.linkedWallets = remoteLinkedWalletsJson;
+        }
+
+        if (Object.keys(sessionUpdate).length > 0) {
+          session = await this.prisma.session.update({
+            where: { sessionId },
+            data: sessionUpdate,
+          });
+        }
+
+        let targetAccountAddress = session.smartAccountAddress;
+        if (
+          remoteSmartAccountAddress &&
+          remoteSmartAccountAddress !== originalSmartAccountAddress
+        ) {
+          try {
+            await this.prisma.account.update({
+              where: { smartAccountAddress: originalSmartAccountAddress },
+              data: { smartAccountAddress: remoteSmartAccountAddress },
+            });
+            targetAccountAddress = remoteSmartAccountAddress;
+          } catch (error) {
+            this.logger.warn(
+              `Failed to update account smart address for session ${sessionId}: ${
+                (error as Error).message
+              }`,
+            );
+          }
+        }
+
+        if (Object.keys(accountUpdate).length > 0) {
+          try {
+            await this.prisma.account.update({
+              where: { smartAccountAddress: targetAccountAddress },
+              data: accountUpdate,
+            });
+          } catch (error) {
+            this.logger.warn(
+              `Failed to sync account metadata on ${targetAccountAddress}: ${
+                (error as Error).message
+              }`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Alchemy status lookup failed for session ${sessionId}: ${
+          (error as Error).message
+        }`,
+      );
     }
 
     const metadata = decodeSponsorshipMetadata(session.sponsorshipTerms);
@@ -442,18 +588,26 @@ export class AaService {
         ? (session.sponsorshipPlan as SponsorshipPlan)
         : undefined;
 
+    const finalLinkedWallets =
+      remoteLinkedWallets ?? mapLinkedWallets(session.linkedWallets);
+
+    const resolvedPaymaster =
+      plan === SponsorshipPlan.SELF
+        ? undefined
+        : remotePaymasterPolicyId !== undefined
+          ? (remotePaymasterPolicyId ?? undefined)
+          : (session.paymasterPolicyId ?? undefined);
+
     return {
       sessionId,
-      status: session.status as StatusResponseDto['status'],
-      smartAccountAddress: session.smartAccountAddress,
-      paymasterPolicyId:
-        plan === SponsorshipPlan.SELF
-          ? undefined
-          : (session.paymasterPolicyId ?? undefined),
+      status: remoteStatus ?? (session.status as StatusResponseDto['status']),
+      smartAccountAddress:
+        remoteSmartAccountAddress ?? session.smartAccountAddress,
+      paymasterPolicyId: resolvedPaymaster,
       loginType: session.loginType as LoginType,
-      ownerAddress: session.ownerAddress,
+      ownerAddress: remoteOwnerAddress ?? session.ownerAddress,
       email: session.email ?? undefined,
-      linkedWallets: mapLinkedWallets(session.linkedWallets),
+      linkedWallets: finalLinkedWallets,
       sponsorshipPlan: plan,
       sponsorshipTermsVersion:
         metadata.version ?? session.sponsorshipTerms ?? undefined,
