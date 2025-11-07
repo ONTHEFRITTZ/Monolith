@@ -11,6 +11,7 @@ WorkingDirectory=/srv/Monolith/apps/web
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=NEXT_PUBLIC_API_BASE_URL=https://monolith-labs.xyz
 ExecStart=/usr/bin/env NODE_ENV=production /usr/bin/npm run start
 Restart=on-failure
 RestartSec=5
