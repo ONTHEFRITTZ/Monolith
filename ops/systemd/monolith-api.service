@@ -1,0 +1,20 @@
+[Unit]
+Description=Mon-olith API (NestJS)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/Monolith/apps/api
+Environment=NODE_ENV=production
+EnvironmentFile=/srv/Monolith/apps/api/.env
+ExecStart=/usr/bin/env NODE_OPTIONS=--max-old-space-size=2048 /usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
