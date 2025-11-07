@@ -96,8 +96,8 @@ export class UniswapAmmService {
           token0,
           token1,
           fee,
-          JSBI.BigInt(sqrtPriceX96Raw),
-          JSBI.BigInt(liquidityRaw),
+          sqrtPriceX96Raw,
+          liquidityRaw,
           Number(tickRaw),
         );
 
@@ -167,10 +167,13 @@ export class UniswapAmmService {
     const route = new Route([this.pool], inputToken, outputToken);
     const trade = Trade.createUncheckedTrade({
       route,
-      inputAmount: CurrencyAmount.fromRawAmount(inputToken, amountInRaw),
+      inputAmount: CurrencyAmount.fromRawAmount(
+        inputToken,
+        amountInRaw.toString(),
+      ),
       outputAmount: CurrencyAmount.fromRawAmount(
         outputToken,
-        JSBI.BigInt(quote.amountOutRaw),
+        quote.amountOutRaw,
       ),
       tradeType: TradeType.EXACT_INPUT,
     });
@@ -202,8 +205,14 @@ export class UniswapAmmService {
 
     const inputToken =
       direction === 'usdc_to_mon' ? this.usdcToken : this.monToken;
-    const amountIn = CurrencyAmount.fromRawAmount(inputToken, amountInRaw);
-    const [amountOut] = this.pool.getOutputAmount(amountIn);
+    const amountIn = CurrencyAmount.fromRawAmount(
+      inputToken,
+      amountInRaw.toString(),
+    );
+    const [amountOut] = this.pool.getOutputAmount(amountIn) as unknown as [
+      CurrencyAmount<Token>,
+      Pool,
+    ];
 
     return {
       amountInRaw: amountInRaw.toString(),
