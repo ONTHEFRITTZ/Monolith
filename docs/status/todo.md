@@ -73,3 +73,4 @@ This checklist consolidates the remaining implementation items we have discussed
 - `CIRCLE_CCTP_MONAD_CHAIN_NAME`, `CIRCLE_CCTP_MONAD_TOKEN_MESSENGER`, and `CIRCLE_CCTP_MONAD_MESSAGE_TRANSMITTER` will be populated as soon as Circle publishes Monad contract addresses.
 - `CIRCLE_CCTP_TRANSFER_SPEED` (`FAST`/`SLOW`) sets the default bridge speed when Circle flows are enabled.
 - `CIRCLE_MINT_API_KEY`, `CIRCLE_MINT_ENVIRONMENT` (`sandbox` or `production`), and `CIRCLE_MINT_WIRE_ACCOUNT_ID` enable live Mint 4 wire instructions for the on/off ramp.
+- `UNISWAP_ROUTER_ADDRESS`, `UNISWAP_CHAIN_ID`, `UNISWAP_USDC_TOKEN_ADDRESS`, `UNISWAP_MON_TOKEN_ADDRESS`, and pool state vars (`UNISWAP_POOL_FEE`, `UNISWAP_POOL_SQRT_PRICE_X96`, `UNISWAP_POOL_LIQUIDITY`, `UNISWAP_POOL_TICK`) prime the Uniswap V3 integration so MON swaps can go live the moment the pool is deployed.

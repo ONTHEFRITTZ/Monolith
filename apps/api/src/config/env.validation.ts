@@ -83,6 +83,46 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   CIRCLE_MINT_WIRE_ACCOUNT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_ROUTER_ADDRESS?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_CHAIN_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_USDC_TOKEN_ADDRESS?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_USDC_TOKEN_DECIMALS?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_MON_TOKEN_ADDRESS?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_MON_TOKEN_DECIMALS?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_POOL_FEE?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_POOL_SQRT_PRICE_X96?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_POOL_LIQUIDITY?: string;
+
+  @IsOptional()
+  @IsString()
+  UNISWAP_POOL_TICK?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { SupportedChain, SupportedToken } from './types/bridge.types';
 import { TOKEN_REGISTRY, TokenDescriptor } from './token.registry';
+import { UniswapAmmService } from './uniswap-amm.service';
 
 const ALCHEMY_CHAIN_IDS: Record<SupportedChain, string | null> = {
   ethereum: 'eth-mainnet',
@@ -21,7 +22,10 @@ export interface QuoteResult {
 export class QuoteService {
   private readonly logger = new Logger(QuoteService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly uniswapAmmService: UniswapAmmService,
+  ) {}
 
   async quote(
     sourceChain: SupportedChain,
@@ -34,19 +38,49 @@ export class QuoteService {
     const sourceMeta = TOKEN_REGISTRY[sourceChain][sourceToken];
     const destinationMeta = TOKEN_REGISTRY[destinationChain][destinationToken];
 
-    const [sourceUsdPrice, destinationUsdPrice] = await Promise.all([
+    const prices = await Promise.all([
       this.fetchUsdPrice(sourceChain, sourceToken, sourceMeta),
       this.fetchUsdPrice(destinationChain, destinationToken, destinationMeta),
     ]);
+    const [sourceUsdPrice, initialDestinationUsdPrice] = prices;
+    let destinationUsdPrice = initialDestinationUsdPrice;
 
     const feeBps =
       feeBpsOverride ?? this.estimateFeeBps(sourceChain, destinationChain);
     const fee = (feeBps / 10_000) * amount;
     const netAmount = amount - fee;
 
-    const estimatedDestinationAmount = destinationUsdPrice
+    let estimatedDestinationAmount = destinationUsdPrice
       ? (netAmount * sourceUsdPrice) / destinationUsdPrice
       : netAmount;
+
+    if (this.uniswapAmmService.isEnabled()) {
+      if (sourceToken === 'usdc' && destinationToken === 'mon') {
+        const ammQuote = this.uniswapAmmService.quoteExactInput(
+          netAmount,
+          'usdc_to_mon',
+        );
+        if (ammQuote) {
+          estimatedDestinationAmount = Number(
+            Number(ammQuote.amountOutExact).toFixed(6),
+          );
+          if (estimatedDestinationAmount > 0) {
+            destinationUsdPrice =
+              (netAmount * sourceUsdPrice) / estimatedDestinationAmount;
+          }
+        }
+      } else if (sourceToken === 'mon' && destinationToken === 'usdc') {
+        const ammQuote = this.uniswapAmmService.quoteExactInput(
+          netAmount,
+          'mon_to_usdc',
+        );
+        if (ammQuote) {
+          estimatedDestinationAmount = Number(
+            Number(ammQuote.amountOutExact).toFixed(6),
+          );
+        }
+      }
+    }
 
     return {
       sourceUsdPrice,
