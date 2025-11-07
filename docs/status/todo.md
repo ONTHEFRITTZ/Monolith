@@ -18,7 +18,7 @@ This checklist consolidates the remaining implementation items we have discussed
 ## 2. Bridge Engine & Pricing
 
 - [x] Swap the static quote registry for live pricing: pull MON/USDC from Hyperliquid pre-market feed and USDC FX data from Alchemy (or fallback oracle).
-- [ ] Enable USDC-only intents for launch (Ethereum/Arbitrum/Solana ↔ Monad) and defer native MON pairs until DEX integration is ready.
+- [x] Enable USDC-only intents for launch (Ethereum/Arbitrum/Solana ↔ Monad) and defer native MON pairs until DEX integration is ready.
 - [ ] Remove the front-end mock bridge client once the Nest routes are complete; update `useBridgeState` to rely on `/api/bridge` exclusively.
 - [ ] Implement submit/preview flows that talk to the bridge worker (or temporary stub) so “Preview bridge” exercises real routing logic without mainnet settlement.
 - [ ] Add logging + alerting hooks to the bridge service for stuck submissions (ties into future compliance tooling).
@@ -56,3 +56,20 @@ This checklist consolidates the remaining implementation items we have discussed
 - [ ] Set up CI to run lint, type-check, and e2e smoke tests for both `apps/web` and `apps/api`.
 - [ ] Document manual QA checklists (guest vs signed-in, multi-wallet linking, tier upgrades, bridge preview) in `docs/status/`.
 - [ ] Prepare deployment scripts/Infrastructure notes (Neon migrations, environment secrets, paymaster rotation) ahead of beta launch.
+
+## Missing Integrations / External Dependencies
+
+- Circle CCTP v2 contracts for Monad (TokenMessenger/MessageTransmitter) once Circle publishes final addresses.
+- Circle Mint 4 institutional on/off ramp APIs (account provisioning, wire webhooks, payout orchestration).
+- Live MON ↔ USDC AMM router on Monad (pending launch of the AMM that can lend).
+- PayPal/Stripe production credentials + webhook handlers for the ramp service.
+- Compliance data providers (sanctions list feed, AML scoring) for the rule engine.
+- Analytics pipeline destination (warehouse + dashboards) to support the insights/rebate program.
+
+### Circle Integration Environment Flags
+
+- `CIRCLE_CCTP_ENABLED` (`true`/`false`) toggles the Bridge Kit path once contracts are live.
+- `CIRCLE_BRIDGE_EVM_PRIVATE_KEY` supplies the relayer key that signs CCTP transactions.
+- `CIRCLE_CCTP_MONAD_CHAIN_NAME`, `CIRCLE_CCTP_MONAD_TOKEN_MESSENGER`, and `CIRCLE_CCTP_MONAD_MESSAGE_TRANSMITTER` will be populated as soon as Circle publishes Monad contract addresses.
+- `CIRCLE_CCTP_TRANSFER_SPEED` (`FAST`/`SLOW`) sets the default bridge speed when Circle flows are enabled.
+- `CIRCLE_MINT_API_KEY`, `CIRCLE_MINT_ENVIRONMENT` (`sandbox` or `production`), and `CIRCLE_MINT_WIRE_ACCOUNT_ID` enable live Mint 4 wire instructions for the on/off ramp.

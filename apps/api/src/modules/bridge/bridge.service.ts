@@ -90,17 +90,6 @@ const PROVIDER_INTENT_CATALOG: Record<
       feeBps: 8,
       etaMinutes: 4,
     },
-    {
-      id: 'monad_usdc_eth',
-      sourceChain: 'monad',
-      sourceToken: 'usdc',
-      destinationChain: 'ethereum',
-      destinationToken: 'usdc',
-      availableAmount: 1500,
-      usdValue: 1500,
-      feeBps: 18,
-      etaMinutes: 9,
-    },
   ],
   phantom: [
     {
@@ -114,17 +103,6 @@ const PROVIDER_INTENT_CATALOG: Record<
       feeBps: 15,
       etaMinutes: 6,
     },
-    {
-      id: 'monad_usdc_sol',
-      sourceChain: 'monad',
-      sourceToken: 'usdc',
-      destinationChain: 'solana',
-      destinationToken: 'usdc',
-      availableAmount: 640,
-      usdValue: 640,
-      feeBps: 20,
-      etaMinutes: 8,
-    },
   ],
   backpack: [
     {
@@ -137,17 +115,6 @@ const PROVIDER_INTENT_CATALOG: Record<
       usdValue: 412.34,
       feeBps: 14,
       etaMinutes: 5,
-    },
-    {
-      id: 'monad_usdc_sol_backpack',
-      sourceChain: 'monad',
-      sourceToken: 'usdc',
-      destinationChain: 'solana',
-      destinationToken: 'usdc',
-      availableAmount: 860.12,
-      usdValue: 860.12,
-      feeBps: 19,
-      etaMinutes: 8,
     },
   ],
 };
@@ -710,12 +677,16 @@ export class BridgeService {
     const usdAmount = sanitizedAmount * quote.sourceUsdPrice;
     await this.assertAllowance(sessionCtx, usdAmount);
 
-    const cctpResult = await this.cctpService.simulateTransfer({
+    const cctpResult = await this.cctpService.submitTransfer({
       intentId,
       sourceChain: base.sourceChain,
       destinationChain: base.destinationChain,
       amount: sanitizedAmount,
       walletProvider: provider,
+      destinationAddress:
+        sessionCtx.account?.smartAccountAddress ??
+        sessionCtx.account?.owner ??
+        undefined,
     });
 
     const submissionStatus: BridgeSubmissionStatus = cctpResult.status;

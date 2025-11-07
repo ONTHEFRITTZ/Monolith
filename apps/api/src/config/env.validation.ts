@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsBooleanString,
   IsInt,
   IsOptional,
   IsString,
@@ -46,6 +47,42 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   HYPERLIQUID_MON_SYMBOL?: string;
+
+  @IsOptional()
+  @IsBooleanString()
+  CIRCLE_CCTP_ENABLED?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_BRIDGE_EVM_PRIVATE_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_CCTP_MONAD_CHAIN_NAME?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_CCTP_MONAD_TOKEN_MESSENGER?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_CCTP_MONAD_MESSAGE_TRANSMITTER?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_CCTP_TRANSFER_SPEED?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_MINT_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_MINT_ENVIRONMENT?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_MINT_WIRE_ACCOUNT_ID?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

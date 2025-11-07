@@ -6,6 +6,7 @@ import {
   RampProvider,
   SupportedRampFiat,
 } from './dto/ramp.dto';
+import { CircleMintService } from './circle-mint.service';
 
 type RampRequestType = 'on' | 'off';
 type RampRequestStatus = 'awaiting_settlement' | 'scheduled';
@@ -37,7 +38,11 @@ export interface RampActionResponse {
 export class RampService {
   private readonly requests = new Map<string, RampRequestRecord>();
 
-  createOnRampRequest(dto: OnRampRequestDto): RampActionResponse {
+  constructor(private readonly circleMintService: CircleMintService) {}
+
+  async createOnRampRequest(
+    dto: OnRampRequestDto,
+  ): Promise<RampActionResponse> {
     this.assertProviderRequirements('on', dto.provider, dto);
     const requestId = randomUUID();
     const referenceCode = this.generateReference(dto.provider);
@@ -56,6 +61,8 @@ export class RampService {
       metadata: this.extractMetadata(dto),
     });
 
+    const instructions = await this.buildOnRampInstructions(dto, referenceCode);
+
     return {
       requestId,
       provider: dto.provider,
@@ -63,7 +70,7 @@ export class RampService {
       referenceCode,
       etaMinutes: this.estimateEtaMinutes(dto.provider, 'on'),
       summary: `Prepare ${dto.amount} ${dto.currency} via ${this.providerLabel(dto.provider)} to credit ${dto.destinationWallet}`,
-      instructions: this.buildOnRampInstructions(dto, referenceCode),
+      instructions,
     };
   }
 
@@ -97,10 +104,20 @@ export class RampService {
     };
   }
 
-  private buildOnRampInstructions(
+  private async buildOnRampInstructions(
     dto: OnRampRequestDto,
     reference: string,
-  ): string[] {
+  ): Promise<string[]> {
+    if (dto.provider === RampProvider.CIRCLE) {
+      const circleGuidance = await this.circleMintService.buildOnRampGuidance(
+        dto,
+        reference,
+      );
+      if (circleGuidance) {
+        return circleGuidance;
+      }
+    }
+
     switch (dto.provider) {
       case RampProvider.PAYPAL:
         return [
