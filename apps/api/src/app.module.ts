@@ -3,9 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
-import { BridgeModule } from './modules/bridge/bridge.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AaModule } from './modules/aa/aa.module';
+import { BridgeModule } from './modules/bridge/bridge.module';
+import { RampModule } from './modules/ramp/ramp.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AaModule } from './modules/aa/aa.module';
     PrismaModule,
     AaModule,
     BridgeModule,
+    RampModule,
   ],
   controllers: [AppController],
   providers: [AppService],

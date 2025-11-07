@@ -11,6 +11,7 @@ This checklist consolidates the remaining implementation items we have discussed
 - [x] Expose profile endpoints to read and update plan preferences (`GET/PATCH /api/aa/profile/:sessionId`).
 - [x] Wire the paymaster policy ID + API key into the Alchemy AA client so sponsorship limits and plan tiers are enforced server-side.
 - [x] Replace the mock AA onboarding responses with real Alchemy session lifecycle (status polling, recovery saves, sponsorship estimates).
+- [ ] Replace the temporary ramp service mocks with real PayPal/Stripe/Circle connectors (webhooks + payout tracking).
 - [ ] Implement Circle CCTP v2 settlement jobs for USDC intents (burn/mint flow, attestation polling, intent status updates).
 - [ ] Add relayer job queue + watchdogs for stuck intents (CCTP timeouts, failed mints, retry logic).
 

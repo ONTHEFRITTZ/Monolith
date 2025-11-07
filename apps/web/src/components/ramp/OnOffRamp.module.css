@@ -2,12 +2,33 @@
   min-height: 100vh;
   padding: 48px 16px 120px;
   background:
-    linear-gradient(180deg, rgba(5, 0, 15, 0.9) 0%, rgba(18, 5, 32, 0.95) 35%, #080212 100%),
-    url("/backgrounds/Monolith.png") center/cover no-repeat;
+    linear-gradient(190deg, rgba(10, 4, 20, 0.4), rgba(8, 3, 16, 0.7)),
+    radial-gradient(circle at 20% 12%, rgba(255, 90, 188, 0.24), transparent 58%),
+    radial-gradient(circle at 85% 85%, rgba(96, 70, 255, 0.26), transparent 60%),
+    url("/backgrounds/Monolith.png") center/cover no-repeat,
+    #07020f;
+  display: flex;
+  flex-direction: column;
   color: #f5f7fa;
+  gap: 32px;
+}
+
+.content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 32px;
+  margin-top: clamp(48px, 8vw, 120px);
+}
+
+.inlineError {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 154, 154, 0.4);
+  background: rgba(255, 154, 154, 0.08);
+  color: #ffb3b3;
+  font-size: 13px;
 }
 
 .header {
@@ -49,6 +70,60 @@
   box-shadow: 0 24px 60px rgba(10, 4, 24, 0.6);
 }
 
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.providerToggle {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.providerChoice {
+  border: 1px solid rgba(150, 110, 255, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: #f5f7fa;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border 0.2s ease,
+    background 0.2s ease;
+}
+
+.providerChoice span {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.providerChoice small {
+  display: block;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.providerChoiceActive {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 768px) {
+  .cardHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .providerToggle {
+    max-width: 280px;
+  }
+}
+
 .card h3 {
   margin: 0;
   font-size: 18px;
@@ -79,6 +154,98 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldGroup label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(233, 225, 255, 0.7);
+}
+
+.fieldGroup input,
+.fieldGroup select,
+.fieldGroup textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 220, 255, 0.2);
+  background: rgba(8, 4, 16, 0.6);
+  color: #f5f7fa;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.fieldGroup textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.amountRow {
+  display: flex;
+  gap: 8px;
+}
+
+.amountRow select {
+  max-width: 120px;
+}
+
+.fieldHint {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.formError {
+  margin: 0;
+  color: #ff9a9a;
+  font-size: 13px;
+}
+
+.resultCard {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(150, 110, 255, 0.25);
+  background: rgba(12, 6, 20, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resultMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 220, 255, 0.6);
+}
+
+.resultSummary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.resultList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(226, 220, 255, 0.85);
 }
 
 .primaryButton,
@@ -143,4 +310,5 @@
   font-size: 13px;
   color: rgba(226, 220, 255, 0.7);
   text-align: center;
+  margin-top: auto;
 }
