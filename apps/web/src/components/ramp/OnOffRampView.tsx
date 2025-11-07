@@ -19,15 +19,15 @@ import {
 } from "@/lib/profile";
 import type { StoredProfile } from "@/lib/profile";
 import styles from "./OnOffRamp.module.css";
-import bridgeStyles from "../bridge/BridgeFlow.module.css";
 import { useBridgeState } from "../bridge/useBridgeState";
+import bridgeStyles from "../bridge/BridgeFlow.module.css";
 import type { WalletProvider, WalletConnection } from "../bridge/types";
 import { providerLabel } from "../bridge/bridgeClient";
 import { ProfilePromptModal } from "../bridge/ProfilePromptModal";
 import { ProfileSettingsModal } from "../bridge/ProfileSettingsModal";
 import { PlansPricingModal } from "../bridge/PlansPricingModal";
 import { PremiumConsoleModal } from "../bridge/PremiumConsoleModal";
-import type { LinkedWallet } from "../onboarding/types";
+import type { LinkedWallet, SponsorshipPlanId } from "../onboarding/types";
 import {
   submitOffRamp,
   submitOnRamp,
@@ -77,7 +77,7 @@ type OffRampFormState = {
 export function OnOffRampView() {
   const router = useRouter();
   const [profile, setProfile] = useState<StoredProfile | null>(null);
-  const [guestMode, setGuestMode] = useState(true);
+  const [, setGuestMode] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
   const [planUpdating, setPlanUpdating] = useState(false);
@@ -211,6 +211,23 @@ export function OnOffRampView() {
       cancelled = true;
     };
   }, [profilePromptInitialized]);
+
+  const orderedConnections = useMemo(
+    () =>
+      PROVIDER_DISPLAY_ORDER.map((provider) =>
+        state.connectedWallets.find((wallet) => wallet.provider === provider)
+      ).filter((wallet): wallet is WalletConnection => Boolean(wallet)),
+    [state.connectedWallets]
+  );
+
+  const connectedCount = orderedConnections.length;
+  const availableProviders = useMemo(
+    () =>
+      WALLET_OPTIONS.filter(
+        (provider) => !state.connectedWallets.some((wallet) => wallet.provider === provider)
+      ),
+    [state.connectedWallets]
+  );
 
   useEffect(() => {
     if (!autoConnectProviders || autoConnectAttempted) {
@@ -448,48 +465,46 @@ export function OnOffRampView() {
     [offRampForm, orderedConnections.length, sessionId]
   );
 
-  const handleUpgradePlan = useCallback(async () => {
-    if (!profile?.sessionId) {
-      setPricingOpen(true);
-      return;
-    }
-    setPlanUpdating(true);
-    setProfileError(null);
-    try {
-      const updated = await updateProfilePlan(profile.sessionId, "pro");
-      if (updated) {
-        setProfile(updated);
-        writeProfile(updated);
-        setGuestMode(false);
-        setProfileSettingsOpen(false);
-        setPricingOpen(true);
-      } else {
-        setProfileError("Unable to upgrade plan right now. Please retry later.");
+  const handlePlanSelect = useCallback(
+    async (plan: SponsorshipPlanId) => {
+      if (!profile?.sessionId) {
+        setProfileOpen(true);
+        setPricingOpen(false);
+        return;
       }
-    } catch (error) {
-      console.error(error);
-      setProfileError("Plan upgrade failed. Please retry.");
-    } finally {
-      setPlanUpdating(false);
+      if (profile.sponsorshipPlan === plan) {
+        setPricingOpen(false);
+        return;
+      }
+      setPlanUpdating(true);
+      setProfileError(null);
+      try {
+        const updated = await updateProfilePlan(profile.sessionId, plan);
+        if (updated) {
+          setProfile(updated);
+          writeProfile(updated);
+          setGuestMode(false);
+          setProfileSettingsOpen(false);
+          setPricingOpen(false);
+        } else {
+          setProfileError("Unable to update plan right now. Please retry later.");
+        }
+      } catch (error) {
+        console.error(error);
+        setProfileError("Plan update failed. Please retry.");
+      } finally {
+        setPlanUpdating(false);
+      }
+    },
+    [profile]
+  );
+
+  const handleShowPlans = useCallback(() => {
+    if (!profile?.sessionId) {
+      setProfileOpen(true);
     }
+    setPricingOpen(true);
   }, [profile]);
-
-  const orderedConnections = useMemo(
-    () =>
-      PROVIDER_DISPLAY_ORDER.map((provider) =>
-        state.connectedWallets.find((wallet) => wallet.provider === provider)
-      ).filter((wallet): wallet is WalletConnection => Boolean(wallet)),
-    [state.connectedWallets]
-  );
-
-  const connectedCount = orderedConnections.length;
-  const availableProviders = useMemo(
-    () =>
-      WALLET_OPTIONS.filter(
-        (provider) => !state.connectedWallets.some((wallet) => wallet.provider === provider)
-      ),
-    [state.connectedWallets]
-  );
 
   useEffect(() => {
     const addresses = orderedConnections.map((wallet) => wallet.address);
@@ -527,78 +542,14 @@ export function OnOffRampView() {
             priority
           />
         </div>
-        <div className={bridgeStyles.connectedPillFixed}>
-          <div className={bridgeStyles.connectedPillRow}>
-            <span className={bridgeStyles.connectedHeading}>
-              {connectedCount} wallet{connectedCount === 1 ? "" : "s"} connected
-            </span>
-            <div className={bridgeStyles.connectedActions}>
-              {guestMode ? (
-                <>
-                  <button
-                    type="button"
-                    className={`${bridgeStyles.pillButton} ${bridgeStyles.pillButtonSecondary}`}
-                    onClick={() => router.push("/onboarding")}
-                    disabled={state.isLoading}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    type="button"
-                    className={`${bridgeStyles.pillButton} ${bridgeStyles.pillButtonPrimary}`}
-                    onClick={() => void handleSignOut()}
-                    disabled={state.isLoading}
-                  >
-                    Disconnect
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className={`${bridgeStyles.pillButton} ${bridgeStyles.pillButtonSecondary}`}
-                    onClick={() => setProfileSettingsOpen(true)}
-                    disabled={state.isLoading}
-                  >
-                    Profile
-                  </button>
-                  <button
-                    type="button"
-                    className={`${bridgeStyles.pillButton} ${bridgeStyles.pillButtonPrimary}`}
-                    onClick={() => void handleSignOut()}
-                    disabled={state.isLoading}
-                  >
-                    Disconnect
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <ul className={bridgeStyles.connectedWalletList}>
-            {orderedConnections.map((wallet) => (
-              <li
-                key={`${wallet.provider}:${wallet.address}`}
-                className={bridgeStyles.connectedWalletItem}
-              >
-                <span className={bridgeStyles.connectedWalletIcon}>
-                  <Image
-                    src={WALLET_LOGOS[wallet.provider]}
-                    alt={`${providerLabel(wallet.provider)} logo`}
-                    width={20}
-                    height={20}
-                  />
-                </span>
-                <div className={bridgeStyles.connectedWalletText}>
-                  <span className={bridgeStyles.connectedWalletProvider}>
-                    {providerLabel(wallet.provider)}
-                  </span>
-                  <span className={bridgeStyles.connectedWalletAddress}>
-                    {shortAddress(wallet.address)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <div className={styles.returnPill}>
+          <button
+            type="button"
+            className={`${bridgeStyles.pillButton} ${bridgeStyles.pillButtonSecondary}`}
+            onClick={() => router.push("/bridge")}
+          >
+            Return to bridge
+          </button>
         </div>
       </header>
       <main className={styles.content}>
@@ -943,7 +894,7 @@ export function OnOffRampView() {
         onMutateProfile={handleProfileMutation}
         onSaveProfileSettings={handleProfileSettingsSave}
         onSignOut={handleSignOut}
-        onUpgradePlan={handleUpgradePlan}
+        onUpgradePlan={handleShowPlans}
         availableProviders={availableProviders}
         walletLogos={WALLET_LOGOS}
         isBusy={state.isLoading || planUpdating || settingsUpdating}
@@ -952,7 +903,8 @@ export function OnOffRampView() {
       <PlansPricingModal
         open={pricingOpen}
         onClose={() => setPricingOpen(false)}
-        onUpgradePlan={handleUpgradePlan}
+        currentPlan={profile?.sponsorshipPlan ?? undefined}
+        onSelectPlan={handlePlanSelect}
         isUpdating={planUpdating}
       />
 

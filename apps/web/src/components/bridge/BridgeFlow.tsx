@@ -15,7 +15,7 @@ import { PlansPricingModal } from "./PlansPricingModal";
 import { ProfilePromptModal } from "./ProfilePromptModal";
 import { ProfileSettingsModal } from "./ProfileSettingsModal";
 import { PremiumConsoleModal } from "./PremiumConsoleModal";
-import type { LinkedWallet } from "../onboarding/types";
+import type { LinkedWallet, SponsorshipPlanId } from "../onboarding/types";
 import type { StoredProfile } from "@/lib/profile";
 import {
   consumeAutoConnectProviders,
@@ -254,31 +254,46 @@ export function BridgeFlow() {
     await actions.submitBridge(state.selectedIntent.id, amount, slippageBps);
   };
 
-  const handleUpgradePlan = useCallback(async () => {
-    if (!profile?.sessionId) {
-      setPricingOpen(true);
-      return;
-    }
-    setPlanUpdating(true);
-    setProfileError(null);
-    try {
-      const updated = await updateProfilePlan(profile.sessionId, "pro");
-      if (updated) {
-        setProfile(updated);
-        writeProfile(updated);
-        setGuestMode(false);
-        setProfileSettingsOpen(false);
-        setPricingOpen(true);
-      } else {
-        setProfileError("Unable to upgrade plan right now. Please retry later.");
+  const handlePlanSelect = useCallback(
+    async (plan: SponsorshipPlanId) => {
+      if (!profile?.sessionId) {
+        setProfileOpen(true);
+        setPricingOpen(false);
+        return;
       }
-    } catch (error) {
-      console.error(error);
-      setProfileError("Plan upgrade failed. Please retry.");
-    } finally {
-      setPlanUpdating(false);
+      if (profile.sponsorshipPlan === plan) {
+        setPricingOpen(false);
+        return;
+      }
+      setPlanUpdating(true);
+      setProfileError(null);
+      try {
+        const updated = await updateProfilePlan(profile.sessionId, plan);
+        if (updated) {
+          setProfile(updated);
+          writeProfile(updated);
+          setGuestMode(false);
+          setProfileSettingsOpen(false);
+          setPricingOpen(false);
+        } else {
+          setProfileError("Unable to update plan right now. Please retry later.");
+        }
+      } catch (error) {
+        console.error(error);
+        setProfileError("Plan update failed. Please retry.");
+      } finally {
+        setPlanUpdating(false);
+      }
+    },
+    [profile]
+  );
+
+  const handleShowPlans = useCallback(() => {
+    if (!profile?.sessionId) {
+      setProfileOpen(true);
     }
-  }, [profile, setPricingOpen]);
+    setPricingOpen(true);
+  }, [profile]);
 
   const handleProfileSettingsSave = useCallback(
     async (patch: ProfileSettingsPatch) => {
@@ -595,7 +610,13 @@ export function BridgeFlow() {
         onSlippageChange={handleSlippageChange}
       />
 
-      <PlansPricingModal open={pricingOpen} onClose={() => setPricingOpen(false)} />
+      <PlansPricingModal
+        open={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+        currentPlan={profile?.sponsorshipPlan ?? undefined}
+        onSelectPlan={handlePlanSelect}
+        isUpdating={planUpdating}
+      />
       <button
         type="button"
         className={styles.planFloatingButton}
@@ -630,7 +651,7 @@ export function BridgeFlow() {
         onMutateProfile={handleProfileMutation}
         onSaveProfileSettings={handleProfileSettingsSave}
         onSignOut={handleSignOut}
-        onUpgradePlan={handleUpgradePlan}
+        onUpgradePlan={handleShowPlans}
         availableProviders={availableProviders}
         walletLogos={WALLET_LOGOS}
         isBusy={state.isLoading || planUpdating || settingsUpdating}

@@ -1,4 +1,5 @@
 import styles from "./BridgeFlow.module.css";
+import type { SponsorshipPlanId } from "../onboarding/types";
 
 interface TierDefinition {
   id: "starter" | "pro" | "self";
@@ -61,9 +62,18 @@ const TIERS: readonly TierDefinition[] = [
 interface PlansPricingModalProps {
   open: boolean;
   onClose: () => void;
+  currentPlan?: SponsorshipPlanId;
+  onSelectPlan?: (plan: SponsorshipPlanId) => void;
+  isUpdating?: boolean;
 }
 
-export function PlansPricingModal({ open, onClose }: PlansPricingModalProps) {
+export function PlansPricingModal({
+  open,
+  onClose,
+  currentPlan,
+  onSelectPlan,
+  isUpdating = false,
+}: PlansPricingModalProps) {
   if (!open) {
     return null;
   }
@@ -95,37 +105,54 @@ export function PlansPricingModal({ open, onClose }: PlansPricingModalProps) {
             </tr>
           </thead>
           <tbody>
-            {TIERS.map((tier) => (
-              <tr key={tier.id}>
-                <td>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <strong>{tier.name}</strong>
-                    {tier.badge ? <span className={styles.badge}>{tier.badge}</span> : null}
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span>{tier.price}</span>
-                    <span style={{ color: "rgba(226,220,255,0.7)", fontSize: 12 }}>
-                      {tier.sponsorship}
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <span>{tier.api}</span>
-                  </div>
-                </td>
-                <td>
-                  <ul className={styles.featureList}>
-                    {tier.services.map((service) => (
-                      <li key={service}>{service}</li>
-                    ))}
-                  </ul>
-                </td>
-                <td>{tier.ideal}</td>
-              </tr>
-            ))}
+            {TIERS.map((tier) => {
+              const isCurrent = currentPlan === tier.id;
+              return (
+                <tr key={tier.id}>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <strong>{tier.name}</strong>
+                      {tier.badge ? <span className={styles.badge}>{tier.badge}</span> : null}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span>{tier.price}</span>
+                      <span style={{ color: "rgba(226,220,255,0.7)", fontSize: 12 }}>
+                        {tier.sponsorship}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span>{tier.api}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <ul className={styles.featureList}>
+                      {tier.services.map((service) => (
+                        <li key={service}>{service}</li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <span>{tier.ideal}</span>
+                      {onSelectPlan ? (
+                        <button
+                          type="button"
+                          className={styles.primaryButton}
+                          disabled={isCurrent || isUpdating}
+                          onClick={() => onSelectPlan(tier.id)}
+                        >
+                          {isCurrent ? "Current plan" : "Choose plan"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 

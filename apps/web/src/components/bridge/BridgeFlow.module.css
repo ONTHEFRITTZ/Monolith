@@ -7,6 +7,7 @@
     radial-gradient(circle at 85% 85%, rgba(96, 70, 255, 0.26), transparent 60%),
     url("/backgrounds/Monolith.png") center/cover no-repeat,
     #07020f;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -328,6 +329,12 @@
   color: #d0d7e2;
 }
 
+.tagAccent {
+  background: rgba(255, 207, 255, 0.1);
+  color: rgba(255, 235, 255, 0.95);
+  border: 1px solid rgba(255, 235, 255, 0.2);
+}
+
 .sheetOverlay {
   position: fixed;
   inset: 0;
@@ -424,10 +431,19 @@
   font-size: 13px;
   padding: 10px 0;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
 }
 
 .quickButton:hover {
   border-color: rgba(124, 241, 181, 0.4);
+}
+
+.quickButton small {
+  font-size: 11px;
+  color: rgba(231, 229, 255, 0.75);
 }
 
 .quoteSummary {

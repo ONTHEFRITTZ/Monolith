@@ -21,6 +21,11 @@ interface AmountSheetProps {
 
 const quickPercents = [25, 50, 75, 100];
 const slippagePresets = [0.1, 0.5, 1, 2];
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 
 export function AmountSheet({
   open,
@@ -44,6 +49,8 @@ export function AmountSheet({
   const displayLabel = `${intent.sourceToken.toUpperCase()} · ${chainLabel(intent.sourceChain)} → ${intent.destinationToken.toUpperCase()} · ${chainLabel(intent.destinationChain)}`;
   const amountNumber = Number(amountInput) || 0;
   const actionLabel = quote ? `Sign with ${providerLabel(intent.provider)}` : "Preview Bridge";
+  const usdPerUnit =
+    intent.availableAmount > 0 ? intent.usdValue / intent.availableAmount : undefined;
   const handleSlippageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = event.target.value;
     if (raw === "") {
@@ -108,17 +115,22 @@ export function AmountSheet({
             </button>
           </div>
           <div className={styles.quickActions}>
-            {quickPercents.map((percent) => (
-              <button
-                key={percent}
-                type="button"
-                className={styles.quickButton}
-                onClick={() => onQuickSelect(percent)}
-                disabled={isLoading}
-              >
-                {percent}%
-              </button>
-            ))}
+            {quickPercents.map((percent) => {
+              const quickAmount = (intent.availableAmount * percent) / 100;
+              const quickUsd = usdPerUnit ? usdPerUnit * quickAmount : undefined;
+              return (
+                <button
+                  key={percent}
+                  type="button"
+                  className={styles.quickButton}
+                  onClick={() => onQuickSelect(percent)}
+                  disabled={isLoading}
+                >
+                  <span>{percent}%</span>
+                  {quickUsd !== undefined ? <small>{usdFormatter.format(quickUsd)}</small> : null}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -127,6 +139,14 @@ export function AmountSheet({
             <span>Available</span>
             <span>{intent.availableFormatted}</span>
           </div>
+          {usdPerUnit ? (
+            <div className={styles.summaryRow}>
+              <span>Spot price</span>
+              <span>
+                ~{usdFormatter.format(usdPerUnit)} / {intent.sourceToken.toUpperCase()}
+              </span>
+            </div>
+          ) : null}
           <div className={styles.summaryRow}>
             <span>Fee rate</span>
             <span>{(intent.feeBps / 100).toFixed(2)}%</span>

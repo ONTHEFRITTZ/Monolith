@@ -1,6 +1,6 @@
 .wrapper {
   min-height: 100vh;
-  padding: 48px 16px 120px;
+  padding: 32px 16px 100px;
   background:
     linear-gradient(190deg, rgba(10, 4, 20, 0.4), rgba(8, 3, 16, 0.7)),
     radial-gradient(circle at 20% 12%, rgba(255, 90, 188, 0.24), transparent 58%),
@@ -12,13 +12,19 @@
   color: #f5f7fa;
   gap: 32px;
 }
+.returnPill {
+  display: flex;
+  justify-content: flex-end;
+}
 
 .content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 32px;
-  margin-top: clamp(48px, 8vw, 120px);
+  margin-top: clamp(16px, 4vw, 64px);
+  position: relative;
+  z-index: 1;
 }
 
 .inlineError {
