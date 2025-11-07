@@ -4,7 +4,7 @@ import { randomBytes } from 'crypto';
 import { BridgeKit } from '@circle-fin/bridge-kit';
 import { Arbitrum, Ethereum } from '@circle-fin/bridge-kit/chains';
 import { createAdapterFromPrivateKey } from '@circle-fin/adapter-viem-v2';
-import type { BridgeResult } from '@circle-fin/bridge-kit';
+import type { BridgeResult, ChainDefinition } from '@circle-fin/bridge-kit';
 import type {
   BridgeSubmissionStatus,
   SupportedChain,
@@ -27,7 +27,7 @@ interface CctpTransferResponse {
 
 type KitAdapterContext = {
   adapter: ReturnType<typeof createAdapterFromPrivateKey>;
-  chain: string;
+  chain: ChainDefinition;
   recipientAddress?: string;
 };
 
@@ -37,20 +37,15 @@ export class CctpService {
   private readonly bridgeKit?: BridgeKit;
   private readonly adapter?: ReturnType<typeof createAdapterFromPrivateKey>;
   private readonly circleEnabled: boolean;
-  private readonly chainAliases: Partial<Record<SupportedChain, string>> = {
-    ethereum: Ethereum.name,
-    arbitrum: Arbitrum.name,
+  private readonly chainDefinitions: Partial<
+    Record<SupportedChain, ChainDefinition>
+  > = {
+    ethereum: Ethereum,
+    arbitrum: Arbitrum,
   };
   private readonly transferSpeed: 'FAST' | 'SLOW';
 
   constructor(private readonly configService: ConfigService) {
-    const monadAlias = this.configService.get<string>(
-      'CIRCLE_CCTP_MONAD_CHAIN_NAME',
-    );
-    if (monadAlias) {
-      this.chainAliases.monad = monadAlias;
-    }
-
     const enabled =
       this.configService.get<string>('CIRCLE_CCTP_ENABLED')?.toLowerCase() ===
       'true';
@@ -158,14 +153,14 @@ export class CctpService {
       return undefined;
     }
 
-    const alias = this.chainAliases[chain];
-    if (!alias) {
+    const chainDefinition = this.chainDefinitions[chain];
+    if (!chainDefinition) {
       return undefined;
     }
 
     return {
       adapter: this.adapter,
-      chain: alias,
+      chain: chainDefinition,
     };
   }
 

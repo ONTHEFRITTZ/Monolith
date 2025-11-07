@@ -684,8 +684,8 @@ export class BridgeService {
       amount: sanitizedAmount,
       walletProvider: provider,
       destinationAddress:
-        sessionCtx.account?.smartAccountAddress ??
-        sessionCtx.account?.owner ??
+        sessionCtx.session.account?.smartAccountAddress ??
+        sessionCtx.session.account?.primaryOwnerAddress ??
         undefined,
     });
 
