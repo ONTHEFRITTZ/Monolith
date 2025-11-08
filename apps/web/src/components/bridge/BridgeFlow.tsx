@@ -364,7 +364,7 @@ export function BridgeFlow() {
     actions.selectIntent(undefined);
   };
 
-  const connectedSummary = useMemo(() => {
+  const heroPrimary = useMemo(() => {
     if (!state.isConnected || state.connectedWallets.length === 0) {
       return guestMode
         ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
@@ -372,7 +372,17 @@ export function BridgeFlow() {
     }
     return guestMode
       ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
-      : "Select a bridging pair below.";
+      : "You're connected. Select a bridging pair below.";
+  }, [guestMode, state.connectedWallets.length, state.isConnected]);
+
+  const heroSecondary = useMemo(() => {
+    if (guestMode) {
+      return "";
+    }
+    if (!state.isConnected || state.connectedWallets.length === 0) {
+      return "";
+    }
+    return "Need extra liquidity or routing priority? Open the console for premium flows.";
   }, [guestMode, state.connectedWallets.length, state.isConnected]);
 
   const orderedConnections = useMemo(
@@ -556,7 +566,10 @@ export function BridgeFlow() {
             </button>
           ) : null}
         </div>
-        {connectedSummary ? <p className={styles.subline}>{connectedSummary}</p> : null}
+        {heroPrimary ? <p className={styles.subline}>{heroPrimary}</p> : null}
+        {heroSecondary ? (
+          <p className={`${styles.subline} ${styles.sublineSecondary}`}>{heroSecondary}</p>
+        ) : null}
 
         {!profileOpen && renderWalletButtons()}
 

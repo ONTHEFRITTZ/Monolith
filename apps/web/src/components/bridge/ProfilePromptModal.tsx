@@ -47,7 +47,6 @@ export function ProfilePromptModal({ open, onDismiss, onContinueGuest }: Profile
             className={styles.profileSecondary}
             onClick={() => {
               onContinueGuest();
-              onDismiss();
             }}
           >
             Continue without sponsorship (higher fee)

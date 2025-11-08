@@ -91,6 +91,11 @@
   line-height: 1.6;
 }
 
+.sublineSecondary {
+  margin-top: -6px;
+  color: rgba(229, 203, 255, 0.6);
+}
+
 .primaryButton,
 .secondaryButton,
 .ghostButton {

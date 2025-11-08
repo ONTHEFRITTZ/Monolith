@@ -28,6 +28,7 @@ export default function Home() {
     return Boolean(readProfile());
   });
   const [promptDismissed, setPromptDismissed] = useState(() => profileExists);
+  const [guestRedirecting, setGuestRedirecting] = useState(false);
 
   useEffect(() => {
     if (profileExists) {
@@ -50,11 +51,12 @@ export default function Home() {
     };
   }, []);
 
-  const promptOpen = !profileExists && !promptDismissed;
+  const promptOpen = !profileExists && (!promptDismissed || guestRedirecting);
 
   const handleGuestContinue = () => {
     markProfileAcknowledged();
     setPromptDismissed(true);
+    setGuestRedirecting(true);
     router.push("/bridge");
   };
 
@@ -95,7 +97,7 @@ export default function Home() {
               type="button"
               className={styles.walletButton}
               onClick={() => void handleConnect(provider)}
-              disabled={connecting !== null}
+              disabled={connecting !== null || guestRedirecting}
             >
               <span className={styles.walletImage}>
                 <Image
