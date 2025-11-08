@@ -558,7 +558,7 @@ export function BridgeFlow() {
         </div>
         {connectedSummary ? <p className={styles.subline}>{connectedSummary}</p> : null}
 
-        {renderWalletButtons()}
+        {!profileOpen && renderWalletButtons()}
 
         {state.isConnected ? (
           <div className={styles.connectActions}>
