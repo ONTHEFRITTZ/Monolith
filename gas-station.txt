@@ -1,0 +1,66 @@
+Title: Gas Station
+
+URL Source: https://developers.circle.com/wallets/gas-station
+
+Markdown Content:
+Gas Station enables developers to build experiences that abstract gas - both for end-users and developers. Developers can sponsor network fees for the end-user, removing the need for end-users to hold native tokens in their wallets. The sponsored gas fees are charged to the developer's credit card; hence, not having them to hold native tokens across chains. This abstracts gas fees: one of the biggest problems of building blockchain apps.
+
+Blockchains require gas transaction fees to incentivize validators and protect networks against denial of service attacks. The mechanics for these fees have traditionally been built into the blockchain itself, often requiring gas fees to be paid in native tokens and sourced by the address that initiated the transaction.
+
+The experience of sourcing native tokens by the originating wallet makes it hard for users to interact onchain and limits the usability of blockchain applications. Depending on the blockchain, there can be different ways to abstract gas. For example:
+
+1.   On EVM chains: With the introduction of [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) (account abstraction), there is a way to pay network fees in non-native tokens via smart contracts called paymasters
+2.   On Solana: By using the concept of fee-payers, third party wallets can pay for gas on behalf of a user.
+
+Circle's Gas Station utilizes paymasters (on EVM) and fee-payers (on Solana) to create a solution that completely abstracts gas. Circle has deployed paymaster smart contracts and fee-payer wallets that developers can use with Circle Wallets.
+
+The solution has the following components:
+
+1.   **Gas Sponsor:** A third party smart contract or wallet that pays on-chain gas fees according to the sponsorship conditions.
+    1.   Paymaster (EVM): Smart contract (ERC-4337 standard)
+    2.   Fee-Payer (Solana): Wallets that pay gas fees
+
+2.   **Policy:** Let developers set up custom rules and limits on the blockchains they want to sponsor.
+3.   **Billing:** Let developers pay all the gas fees using their preferred payment modes (cards).
+
+On EVM chains, the Programmable Wallet must be an ERC-4337-compliant smart contract account. Developers can create these wallets by passing `"accountType": "SCA"` in the create wallet API for Wallets.
+
+To learn more on creating a SCA wallet follow one of the two guides:
+
+1.   [Create your first developer-controlled wallets](https://developers.circle.com/wallets/dev-controlled/create-your-first-wallet).
+2.   [Create your first user-controlled wallet](https://developers.circle.com/wallets/user-controlled/react-native-sdk-ui-customization-api).
+
+Circle Gas Stations support the following blockchains:
+
+| Blockchain Network | PW User-Controlled | PW Developer Controlled |
+| --- | --- | --- |
+| Aptos Mainnet | ✅ | ✅ |
+| Aptos Testnet | ✅ | ✅ |
+| Arbitrum Mainnet | ✅ | ✅ |
+| Arbitrum Sepolia Testnet | ✅ | ✅ |
+| Arc Testnet | ✅ | ✅ |
+| Avalanche Mainnet | ✅ | ✅ |
+| Avalanche Fuji Testnet | ✅ | ✅ |
+| Base Mainnet | ✅ | ✅ |
+| Base Sepolia Testnet | ✅ | ✅ |
+| Ethereum Mainnet | ✅ | ✅ |
+| Ethereum Sepolia Testnet | ✅ | ✅ |
+| Optimism Mainnet | ✅ | ✅ |
+| Optimism Sepolia Testnet | ✅ | ✅ |
+| Polygon Mainnet | ✅ | ✅ |
+| Polygon Amoy Testnet | ✅ | ✅ |
+| Solana Mainnet | ✅ | ✅ |
+| Solana Devnet | ✅ | ✅ |
+| Unichain Mainnet | ✅ | ✅ |
+| Unichain Sepolia Testnet | ✅ | ✅ |
+
+Gas Station allows you to sponsor network fees for your users. If you want to allow users to pay their network fees with USDC themselves, see the [Circle Paymaster](https://developers.circle.com/paymaster).
+
+| Category | Circle Paymaster | Gas Station |
+| --- | --- | --- |
+| **Description** | A permissionless smart contract that allows users to pay gas fees in USDC instead of native tokens. | A feature of Wallets that allows developers to sponsor gas fees for their users. |
+| **Circle account** | Not required | Required |
+| **Compatible wallets** | Any ERC-4337-compliant wallet | Circle Wallets |
+| **Gas fees paid in** | USDC | Fiat currency via credit card |
+| **Pricing model** | 10% of the gas fee | 5% of the gas fee |
+| **Paid by** | End user | Developer |

@@ -74,7 +74,10 @@ export function OnboardingFlow() {
   );
 
   const handleSessionStart = useCallback(
-    async ({ loginType, email }: { loginType: LoginType; email?: string }) => {
+    async (
+      { loginType, email }: { loginType: LoginType; email?: string },
+      options?: { socialLogins?: Array<"google" | "apple"> }
+    ) => {
       try {
         setStepBusy(true);
         actions.setProcessing(true);
@@ -86,13 +89,15 @@ export function OnboardingFlow() {
           email,
         });
         actions.setError(undefined);
+        const nextSocialLogins = options?.socialLogins ?? [];
+        actions.setSocialLogins(nextSocialLogins);
         persistSession(response.sessionId, {
           loginType,
           ownerAddress: response.ownerAddress,
           email,
           status: "pending",
           linkedWallets: [],
-          socialLogins: [],
+          socialLogins: nextSocialLogins,
         });
         actions.advance();
       } catch (error) {
@@ -106,19 +111,24 @@ export function OnboardingFlow() {
     [actions, handleError]
   );
 
-  const handleToggleSocial = useCallback(
-    (provider: "google" | "apple") => {
-      const next = state.socialLogins.includes(provider)
-        ? state.socialLogins.filter((value) => value !== provider)
-        : [...state.socialLogins, provider];
-      actions.setSocialLogins(next);
-      if (state.sessionId) {
-        persistSession(state.sessionId, {
-          socialLogins: next,
-        });
+  const handleWalletConnect = useCallback(
+    async (provider: WalletProvider) => {
+      if (provider !== "metamask") {
+        actions.setError(
+          `${provider === "phantom" ? "Phantom" : "Backpack"} support is coming soon.`
+        );
+        return;
       }
+      await handleSessionStart({ loginType: "metamask" });
     },
-    [actions, state.sessionId, state.socialLogins]
+    [actions, handleSessionStart]
+  );
+
+  const handleSocialConnect = useCallback(
+    async (provider: "google" | "apple") => {
+      await handleSessionStart({ loginType: "social" }, { socialLogins: [provider] });
+    },
+    [handleSessionStart]
   );
 
   const handleSaveRecovery = useCallback(
@@ -464,11 +474,8 @@ export function OnboardingFlow() {
         return (
           <OnboardingStepIdentify
             state={state}
-            onMetaMask={() => handleSessionStart({ loginType: "metamask" })}
-            onEmailSubmit={(email) => handleSessionStart({ loginType: "email", email })}
-            onSocial={() => handleSessionStart({ loginType: "social" })}
-            onToggleSocial={handleToggleSocial}
-            socialLogins={state.socialLogins}
+            onWalletConnect={handleWalletConnect}
+            onSocialConnect={handleSocialConnect}
             isProcessing={stepBusy}
           />
         );

@@ -86,6 +86,42 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  CIRCLE_SMART_WALLET_API_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_API_BASE?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_ENTITY_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_APP_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_DEFAULT_POLICY_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_START_SESSION_PATH?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_SESSION_STATUS_PATH?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_FINALIZE_PATH?: string;
+
+  @IsOptional()
+  @IsString()
+  CIRCLE_SMART_WALLET_RECOVERY_PATH?: string;
+
+  @IsOptional()
+  @IsString()
   UNISWAP_ROUTER_ADDRESS?: string;
 
   @IsOptional()
