@@ -371,7 +371,7 @@ export function BridgeFlow() {
         : "";
     }
     return guestMode
-      ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship."
+      ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship. Onboarding unlocks the paymaster."
       : "You're connected. Select a bridging pair below.";
   }, [guestMode, state.connectedWallets.length, state.isConnected]);
 
@@ -451,6 +451,8 @@ export function BridgeFlow() {
       </div>
     );
   };
+
+  const shouldShowHeaderSignIn = guestMode && connectedCount === 0;
 
   return (
     <div className={styles.wrapper}>
@@ -542,7 +544,7 @@ export function BridgeFlow() {
               </ul>
             </div>
           ) : null}
-          {guestMode ? (
+          {shouldShowHeaderSignIn ? (
             <button
               type="button"
               className={styles.signInButton}
@@ -635,25 +637,37 @@ export function BridgeFlow() {
         isUpdating={planUpdating}
       />
       <div className={styles.floatingButtonDock}>
-        <Link href="/ramp" className={styles.rampFloatingButton}>
-          On / Off ramp
-        </Link>
-        <button
-          type="button"
-          className={styles.planFloatingButton}
-          onClick={() => setPricingOpen(true)}
-        >
-          Plans &amp; pricing
-        </button>
         {!guestMode ? (
+          <Link href="/ramp" className={styles.rampFloatingButton}>
+            On / Off ramp
+          </Link>
+        ) : null}
+        {!guestMode ? (
+          <>
+            <button
+              type="button"
+              className={styles.planFloatingButton}
+              onClick={() => setPricingOpen(true)}
+            >
+              Plans &amp; pricing
+            </button>
+            <button
+              type="button"
+              className={styles.consoleFloatingButton}
+              onClick={() => setPremiumOpen(true)}
+            >
+              Console
+            </button>
+          </>
+        ) : (
           <button
             type="button"
-            className={styles.consoleFloatingButton}
-            onClick={() => setPremiumOpen(true)}
+            className={styles.planFloatingButton}
+            onClick={() => setPricingOpen(true)}
           >
-            Console
+            Plans &amp; pricing
           </button>
-        ) : null}
+        )}
       </div>
       <ProfilePromptModal
         open={profileOpen}
