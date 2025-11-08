@@ -546,7 +546,15 @@ export function BridgeFlow() {
 
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
-          <h1 className={styles.headline}>BRIDGE</h1>
+          {guestMode ? (
+            <button
+              type="button"
+              className={`${styles.signInButton} ${styles.signInButtonCompact}`}
+              onClick={() => router.push("/onboarding")}
+            >
+              Sign in
+            </button>
+          ) : null}
         </div>
         {connectedSummary ? <p className={styles.subline}>{connectedSummary}</p> : null}
 
@@ -584,10 +592,6 @@ export function BridgeFlow() {
 
       {state.isConnected ? (
         <BalanceIntentList intents={state.intents} onSelect={handleSelect} />
-      ) : guestMode ? (
-        <p className={styles.subline}>
-          We surface USDC balances from EVM and Solana wallets. Connect a provider to begin.
-        </p>
       ) : null}
 
       {state.submission ? (
@@ -617,25 +621,27 @@ export function BridgeFlow() {
         onSelectPlan={handlePlanSelect}
         isUpdating={planUpdating}
       />
-      <button
-        type="button"
-        className={styles.planFloatingButton}
-        onClick={() => setPricingOpen(true)}
-      >
-        Plans &amp; pricing
-      </button>
-      <Link href="/ramp" className={styles.rampFloatingButton}>
-        On / Off ramp
-      </Link>
-      {!guestMode ? (
+      <div className={styles.floatingButtonDock}>
+        <Link href="/ramp" className={styles.rampFloatingButton}>
+          On / Off ramp
+        </Link>
         <button
           type="button"
-          className={styles.consoleFloatingButton}
-          onClick={() => setPremiumOpen(true)}
+          className={styles.planFloatingButton}
+          onClick={() => setPricingOpen(true)}
         >
-          Console
+          Plans &amp; pricing
         </button>
-      ) : null}
+        {!guestMode ? (
+          <button
+            type="button"
+            className={styles.consoleFloatingButton}
+            onClick={() => setPremiumOpen(true)}
+          >
+            Console
+          </button>
+        ) : null}
+      </div>
       <ProfilePromptModal
         open={profileOpen}
         onDismiss={() => setProfileOpen(false)}
