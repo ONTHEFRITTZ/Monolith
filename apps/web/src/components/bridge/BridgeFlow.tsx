@@ -389,9 +389,7 @@ export function BridgeFlow() {
 
   const heroPrimary = useMemo(() => {
     if (!state.isConnected || state.connectedWallets.length === 0) {
-      return guestMode
-        ? "Connect MetaMask, Phantom, or Backpack to detect balances across your networks."
-        : "";
+      return guestMode ? "Connect MetaMask, Phantom, or Backpack." : "";
     }
     return guestMode
       ? "Review balances as a guest. Sign in to bridge with Monolith sponsorship. Onboarding unlocks the paymaster."

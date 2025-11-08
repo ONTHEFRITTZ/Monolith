@@ -49,7 +49,7 @@ export function ProfilePromptModal({ open, onDismiss, onContinueGuest }: Profile
               onContinueGuest();
             }}
           >
-            Continue without sponsorship (higher fee)
+            Continue without sponsorship
           </button>
         </div>
         <p className={styles.profileCopy}>

@@ -4,7 +4,7 @@ import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 export const metadata: Metadata = {
   title: "Monolith · Smart Account Onboarding",
   description:
-    "Create your Monad smart account with MetaMask and Alchemy Smart Wallet SDK support, recovery controls, and gas sponsorship plans.",
+    "Create your Monad Smart Wallet with SDK support, recovery controls, and gas sponsorship plans.",
 };
 
 export default function OnboardingPage() {
