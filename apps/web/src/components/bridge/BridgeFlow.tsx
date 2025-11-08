@@ -38,6 +38,8 @@ const WALLET_LOGOS: Record<WalletProvider, string> = {
   phantom: "/logos/phantom.png",
   backpack: "/logos/backpack.png",
 };
+const GUEST_ONLY_MODE = process.env.NEXT_PUBLIC_BRIDGE_GUEST_ONLY !== "false";
+const MAX_GUEST_WALLETS = 2;
 export function BridgeFlow() {
   const router = useRouter();
   const [profile, setProfile] = useState<StoredProfile | null>(null);
@@ -49,7 +51,7 @@ export function BridgeFlow() {
   const [guestMode, setGuestMode] = useState(true);
   const [autoConnectProviders, setAutoConnectProviders] = useState<WalletProvider[] | null>(null);
   const [autoConnectAttempted, setAutoConnectAttempted] = useState(false);
-  const [profilePromptInitialized, setProfilePromptInitialized] = useState(false);
+  const [profilePromptInitialized, setProfilePromptInitialized] = useState(GUEST_ONLY_MODE);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
   const [planUpdating, setPlanUpdating] = useState(false);
   const [settingsUpdating, setSettingsUpdating] = useState(false);
@@ -68,6 +70,9 @@ export function BridgeFlow() {
 
   const handleProfileMutation = useCallback(
     (mutator: (current: StoredProfile) => StoredProfile) => {
+      if (GUEST_ONLY_MODE) {
+        return;
+      }
       setGuestMode(false);
       setProfile((prev) => {
         if (!prev) {
@@ -99,9 +104,12 @@ export function BridgeFlow() {
 
   const handleSignOut = useCallback(async () => {
     await actions.disconnectAll();
+    setGuestMode(true);
+    if (GUEST_ONLY_MODE) {
+      return;
+    }
     clearProfileStorage();
     setProfile(null);
-    setGuestMode(true);
     setProfileSettingsOpen(false);
     setProfilePromptInitialized(false);
     setProfileOpen(true);
@@ -109,6 +117,9 @@ export function BridgeFlow() {
   }, [actions]);
 
   useEffect(() => {
+    if (GUEST_ONLY_MODE) {
+      return;
+    }
     if (profilePromptInitialized) {
       const queued = consumeAutoConnectProviders();
       if (queued.length > 0) {
@@ -139,6 +150,9 @@ export function BridgeFlow() {
   }, [profilePromptInitialized]);
 
   useEffect(() => {
+    if (GUEST_ONLY_MODE) {
+      return;
+    }
     let cancelled = false;
     const run = async () => {
       const synced = await syncProfileWithServer();
@@ -195,7 +209,7 @@ export function BridgeFlow() {
   }, [actions, autoConnectAttempted, autoConnectProviders, state.connectedWallets]);
 
   useEffect(() => {
-    if (!profile) {
+    if (GUEST_ONLY_MODE || !profile) {
       return;
     }
     const linkedFromState = mapConnectionsToLinkedWallets(state.connectedWallets);
@@ -210,18 +224,15 @@ export function BridgeFlow() {
   }, [profile, state.connectedWallets]);
 
   useEffect(() => {
+    if (GUEST_ONLY_MODE) {
+      return;
+    }
     if (profile) {
       setGuestMode(false);
     }
   }, [profile]);
 
   const handleSelect = (intent: BalanceIntent) => {
-    if (guestMode) {
-      setProfileError(
-        "Sign in to bridge with Monolith sponsorship. Onboarding unlocks the paymaster."
-      );
-      return;
-    }
     actions.selectIntent(intent);
     setAmountInput("");
     setSlippage(0.5);
@@ -256,6 +267,9 @@ export function BridgeFlow() {
 
   const handlePlanSelect = useCallback(
     async (plan: SponsorshipPlanId) => {
+      if (GUEST_ONLY_MODE) {
+        return;
+      }
       if (!profile?.sessionId) {
         setProfileOpen(true);
         setPricingOpen(false);
@@ -289,6 +303,9 @@ export function BridgeFlow() {
   );
 
   const handleShowPlans = useCallback(() => {
+    if (GUEST_ONLY_MODE) {
+      return;
+    }
     if (!profile?.sessionId) {
       setProfileOpen(true);
     }
@@ -297,6 +314,9 @@ export function BridgeFlow() {
 
   const handleProfileSettingsSave = useCallback(
     async (patch: ProfileSettingsPatch) => {
+      if (GUEST_ONLY_MODE) {
+        return;
+      }
       if (!profile?.sessionId) {
         setProfileError("Profile unavailable. Complete onboarding to manage settings.");
         return;
@@ -324,6 +344,9 @@ export function BridgeFlow() {
 
   const handleLinkWalletFromSettings = useCallback(
     async (provider: WalletProvider) => {
+      if (GUEST_ONLY_MODE) {
+        return;
+      }
       const connection = await actions.connectProvider(provider);
       if (!connection) {
         return;
@@ -400,12 +423,15 @@ export function BridgeFlow() {
       ),
     [state.connectedWallets]
   );
+  const shouldShowHeaderSignIn = !GUEST_ONLY_MODE && guestMode && connectedCount === 0;
+  const shouldShowCompactSignIn = !GUEST_ONLY_MODE && guestMode;
+  const showFloatingDock = !GUEST_ONLY_MODE && !guestMode;
 
   const handleProviderConnect = useCallback(
     async (provider: WalletProvider) => {
-      if (guestMode && state.connectedWallets.length > 0) {
+      if (guestMode && state.connectedWallets.length >= MAX_GUEST_WALLETS) {
         setProfileError(
-          "Guests can only connect one wallet at a time. Disconnect to switch wallets."
+          `Guests can only connect up to ${MAX_GUEST_WALLETS} wallets. Disconnect one to switch.`
         );
         return;
       }
@@ -558,7 +584,7 @@ export function BridgeFlow() {
 
       <header className={styles.header}>
         <div className={styles.headerTopRow}>
-          {guestMode ? (
+          {shouldShowCompactSignIn ? (
             <button
               type="button"
               className={`${styles.signInButton} ${styles.signInButtonCompact}`}
@@ -629,73 +655,65 @@ export function BridgeFlow() {
         onSlippageChange={handleSlippageChange}
       />
 
-      <PlansPricingModal
-        open={pricingOpen}
-        onClose={() => setPricingOpen(false)}
-        currentPlan={profile?.sponsorshipPlan ?? undefined}
-        onSelectPlan={handlePlanSelect}
-        isUpdating={planUpdating}
-      />
-      <div className={styles.floatingButtonDock}>
-        {!guestMode ? (
-          <Link href="/ramp" className={styles.rampFloatingButton}>
-            On / Off ramp
-          </Link>
-        ) : null}
-        {!guestMode ? (
-          <>
-            <button
-              type="button"
-              className={styles.planFloatingButton}
-              onClick={() => setPricingOpen(true)}
-            >
-              Plans &amp; pricing
-            </button>
-            <button
-              type="button"
-              className={styles.consoleFloatingButton}
-              onClick={() => setPremiumOpen(true)}
-            >
-              Console
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className={styles.planFloatingButton}
-            onClick={() => setPricingOpen(true)}
-          >
-            Plans &amp; pricing
-          </button>
-        )}
-      </div>
-      <ProfilePromptModal
-        open={profileOpen}
-        onDismiss={() => setProfileOpen(false)}
-        onContinueGuest={handleGuestContinue}
-      />
+      {!GUEST_ONLY_MODE ? (
+        <>
+          <PlansPricingModal
+            open={pricingOpen}
+            onClose={() => setPricingOpen(false)}
+            currentPlan={profile?.sponsorshipPlan ?? undefined}
+            onSelectPlan={handlePlanSelect}
+            isUpdating={planUpdating}
+          />
+          {showFloatingDock ? (
+            <div className={styles.floatingButtonDock}>
+              <Link href="/ramp" className={styles.rampFloatingButton}>
+                On / Off ramp
+              </Link>
+              <button
+                type="button"
+                className={styles.planFloatingButton}
+                onClick={() => setPricingOpen(true)}
+              >
+                Plans &amp; pricing
+              </button>
+              <button
+                type="button"
+                className={styles.consoleFloatingButton}
+                onClick={() => setPremiumOpen(true)}
+              >
+                Console
+              </button>
+            </div>
+          ) : null}
+          <ProfilePromptModal
+            open={profileOpen}
+            onDismiss={() => setProfileOpen(false)}
+            onContinueGuest={handleGuestContinue}
+          />
 
-      <ProfileSettingsModal
-        open={profileSettingsOpen}
-        profile={profile}
-        onClose={() => setProfileSettingsOpen(false)}
-        onLinkWallet={handleLinkWalletFromSettings}
-        onRemoveWallet={handleRemoveWalletFromSettings}
-        onMutateProfile={handleProfileMutation}
-        onSaveProfileSettings={handleProfileSettingsSave}
-        onSignOut={handleSignOut}
-        onUpgradePlan={handleShowPlans}
-        availableProviders={availableProviders}
-        walletLogos={WALLET_LOGOS}
-        isBusy={state.isLoading || planUpdating || settingsUpdating}
-      />
-      <PremiumConsoleModal
-        open={premiumOpen}
-        profile={profile}
-        onClose={() => setPremiumOpen(false)}
-        onSave={handleProfileSettingsSave}
-        isBusy={state.isLoading || settingsUpdating}
-      />
+          <ProfileSettingsModal
+            open={profileSettingsOpen}
+            profile={profile}
+            onClose={() => setProfileSettingsOpen(false)}
+            onLinkWallet={handleLinkWalletFromSettings}
+            onRemoveWallet={handleRemoveWalletFromSettings}
+            onMutateProfile={handleProfileMutation}
+            onSaveProfileSettings={handleProfileSettingsSave}
+            onSignOut={handleSignOut}
+            onUpgradePlan={handleShowPlans}
+            availableProviders={availableProviders}
+            walletLogos={WALLET_LOGOS}
+            isBusy={state.isLoading || planUpdating || settingsUpdating}
+          />
+          <PremiumConsoleModal
+            open={premiumOpen}
+            profile={profile}
+            onClose={() => setPremiumOpen(false)}
+            onSave={handleProfileSettingsSave}
+            isBusy={state.isLoading || settingsUpdating}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
