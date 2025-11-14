@@ -31,13 +31,13 @@ import {
   type ProfileSettingsPatch,
 } from "@/lib/profile";
 
-const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
-const PROVIDER_DISPLAY_ORDER: WalletProvider[] = ["metamask", "phantom", "backpack"];
-const WALLET_LOGOS: Record<WalletProvider, string> = {
-  metamask: "/logos/metamask.png",
-  phantom: "/logos/phantom.png",
-  backpack: "/logos/backpack.png",
-};
+//const WALLET_OPTIONS: WalletProvider[] = ["metamask", "phantom", "backpack"];
+//const PROVIDER_DISPLAY_ORDER: WalletProvider[] = ["metamask", "phantom", "backpack"];
+//const WALLET_LOGOS: Record<WalletProvider, string> = {
+//  metamask: "/logos/metamask.png",
+//  phantom: "/logos/phantom.png",
+//  backpack: "/logos/backpack.png",
+//};
 const GUEST_ONLY_MODE = process.env.NEXT_PUBLIC_BRIDGE_GUEST_ONLY !== "false";
 const MAX_GUEST_WALLETS = 2;
 export function BridgeFlow() {
