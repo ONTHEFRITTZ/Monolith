@@ -4,7 +4,7 @@ Use this command from your local terminal (PowerShell) to connect to the Mon-oli
 
 ```bash
 
-ssh -i "C:\Users\onthe\Documents\Web3\Private\Monolith.pem" ubuntu@3.151.80.105
+ssh -i "C:\Users\onthe\Documents\Web3\Mon-olith\Monolith.pem" ubuntu@3.151.80.105
 
 
 ```
